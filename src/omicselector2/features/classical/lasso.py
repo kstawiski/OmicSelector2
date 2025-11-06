@@ -267,30 +267,32 @@ class LassoSelector(BaseFeatureSelector):
         else:
             raise ValueError("Model does not have coefficients")
 
-        # Create support mask for non-zero coefficients
-        self.support_mask_ = coef > 1e-10
-
-        # Get indices of selected features
-        selected_indices = np.where(self.support_mask_)[0]
-
-        # Get feature scores (absolute coefficients)
-        self.feature_scores_ = coef[selected_indices]
-
-        # Sort by score (descending)
-        sorted_indices = np.argsort(-self.feature_scores_)
-        selected_indices = selected_indices[sorted_indices]
-        self.feature_scores_ = self.feature_scores_[sorted_indices]
-
-        # Limit to n_features_to_select if specified
+        # If n_features_to_select is specified, select top-k by magnitude
+        # Otherwise, select only non-zero coefficients
         if self.n_features_to_select is not None:
-            n_select = min(self.n_features_to_select, len(selected_indices))
-            selected_indices = selected_indices[:n_select]
-            self.feature_scores_ = self.feature_scores_[:n_select]
+            # Rank all features by absolute coefficient (descending)
+            sorted_indices = np.argsort(-coef)
+            n_select = min(self.n_features_to_select, len(coef))
+            selected_indices = sorted_indices[:n_select]
 
-            # Update support mask
-            new_mask = np.zeros(len(self.support_mask_), dtype=bool)
-            new_mask[selected_indices] = True
-            self.support_mask_ = new_mask
+            # Create support mask
+            self.support_mask_ = np.zeros(len(coef), dtype=bool)
+            self.support_mask_[selected_indices] = True
+
+            # Get feature scores
+            self.feature_scores_ = coef[selected_indices]
+        else:
+            # Select only non-zero coefficients
+            self.support_mask_ = coef > 1e-10
+            selected_indices = np.where(self.support_mask_)[0]
+
+            # Get feature scores (absolute coefficients)
+            self.feature_scores_ = coef[selected_indices]
+
+            # Sort by score (descending)
+            sorted_indices = np.argsort(-self.feature_scores_)
+            selected_indices = selected_indices[sorted_indices]
+            self.feature_scores_ = self.feature_scores_[sorted_indices]
 
         # Get feature names
         self.selected_features_ = [X.columns[i] for i in selected_indices]
