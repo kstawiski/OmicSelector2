@@ -51,6 +51,7 @@ from omicselector2.models.classical import (
     RandomForestClassifier,
     XGBoostClassifier,
 )
+from omicselector2.models.neural import TabNetClassifier
 from omicselector2.training.cross_validation import CrossValidator
 from omicselector2.training.evaluator import ClassificationEvaluator
 
@@ -226,7 +227,7 @@ class SignatureBenchmark:
 
     def _create_model(
         self, model_name: str
-    ) -> RandomForestClassifier | LogisticRegressionModel | XGBoostClassifier:
+    ) -> RandomForestClassifier | LogisticRegressionModel | XGBoostClassifier | TabNetClassifier:
         """Create model instance.
 
         Args:
@@ -244,6 +245,13 @@ class SignatureBenchmark:
         elif model_name == "XGBoost":
             return XGBoostClassifier(
                 n_estimators=100, random_state=self.random_state
+            )
+        elif model_name == "TabNet":
+            return TabNetClassifier(
+                max_epochs=50,  # Reasonable for benchmarking
+                batch_size=256,
+                patience=10,
+                verbose=False,
             )
         else:
             raise ValueError(f"Unknown model: {model_name}")
@@ -305,7 +313,7 @@ class Benchmarker:
     def benchmark_signatures(
         self,
         signatures: dict[str, list[str]],
-        models: list[Literal["RandomForest", "LogisticRegression", "XGBoost"]],
+        models: list[Literal["RandomForest", "LogisticRegression", "XGBoost", "TabNet"]],
         X_train: pd.DataFrame,
         y_train: pd.Series,
         X_test: pd.DataFrame,
