@@ -9,6 +9,11 @@ Provides training infrastructure:
 - Experiment tracking (MLflow integration)
 """
 
+from omicselector2.training.benchmarking import (
+    BenchmarkResult,
+    Benchmarker,
+    SignatureBenchmark,
+)
 from omicselector2.training.cross_validation import (
     CrossValidator,
     KFoldSplitter,
@@ -29,4 +34,7 @@ __all__ = [
     "ClassificationEvaluator",
     "RegressionEvaluator",
     "SurvivalEvaluator",
+    "BenchmarkResult",
+    "Benchmarker",
+    "SignatureBenchmark",
 ]
