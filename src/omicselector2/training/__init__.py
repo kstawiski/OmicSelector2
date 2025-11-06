@@ -9,4 +9,16 @@ Provides training infrastructure:
 - Experiment tracking (MLflow integration)
 """
 
-__all__ = []
+from omicselector2.training.cross_validation import (
+    CrossValidator,
+    KFoldSplitter,
+    StratifiedKFoldSplitter,
+    TrainTestValSplitter,
+)
+
+__all__ = [
+    "CrossValidator",
+    "KFoldSplitter",
+    "StratifiedKFoldSplitter",
+    "TrainTestValSplitter",
+]
