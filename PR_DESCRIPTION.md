@@ -5,13 +5,15 @@ This PR completes **Phase 3: Feature Selection Core** from CLAUDE.md by implemen
 - ✅ Ensemble Methods (5 strategies)
 - ✅ HDG (High-Deviation Genes) for single-cell RNA-seq
 - ✅ HEG (High-Expression Genes) for single-cell RNA-seq
+- ✅ Correlation Filter (remove redundant features)
 - 🐛 Critical bug fix: Lasso selector with high alpha
 
-**Test Coverage**: 217 tests passing (up from 187)
+**Test Coverage**: 235 tests passing (up from 187)
 - +15 tests: Stability Selection
 - +22 tests: Ensemble Methods
 - +17 tests: HDG selector
 - +19 tests: HEG selector
+- +18 tests: Correlation Filter
 
 ## Commits
 
@@ -162,13 +164,53 @@ selector = HEGSelector(percentile=90, metric="mean")
 top_genes = selector.fit_transform(expression_matrix, y)
 ```
 
+### 6. feat(features): implement Correlation Filter for removing redundant features
+**Implementation**: Correlation-based filter that removes highly correlated (redundant) features.
+
+**Correlation Methods**:
+- **Pearson**: Linear correlation (default, fast)
+- **Spearman**: Rank correlation (robust to outliers, non-linear relationships)
+- **Kendall**: Rank correlation (robust, slower but more accurate for small samples)
+
+**Key Features**:
+- Unsupervised (doesn't require labels)
+- Configurable threshold (default 0.9 = 90% correlation)
+- Tracks which features were removed and why
+- Stores full correlation matrix for analysis
+- Deterministic, reproducible
+
+**Use Cases**:
+- Remove correlated genes in RNA-seq (co-regulated pathways)
+- Reduce multicollinearity before model training
+- Dimensionality reduction while preserving information
+- Preprocessing for interpretable models
+
+**Example**:
+```python
+from omicselector2.features.filters.correlation import CorrelationFilter
+
+# Remove features with correlation > 0.9
+selector = CorrelationFilter(threshold=0.9, method="pearson")
+selector.fit(gene_expression, phenotype)
+
+# Check which features were removed
+print(f"Removed {len(selector.removed_features_)} redundant features")
+for feature in selector.removed_features_:
+    print(f"  {feature}")
+
+# Use Spearman for non-linear relationships
+selector = CorrelationFilter(threshold=0.8, method="spearman")
+X_filtered = selector.fit_transform(X, y)
+```
+
 ## Test Summary
 
-**Total: 217 tests passing** (all feature selection tests)
+**Total: 235 tests passing** (all feature selection tests)
 
 ### Test Breakdown:
 - Base: 6 tests
 - Boruta: 16 tests
+- **Correlation Filter: 18 tests** ⭐ NEW
 - Elastic Net: 10 tests
 - **Ensemble: 22 tests** ⭐ NEW
 - **HDG: 17 tests** ⭐ NEW (single-cell)
