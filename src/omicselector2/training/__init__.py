@@ -15,10 +15,18 @@ from omicselector2.training.cross_validation import (
     StratifiedKFoldSplitter,
     TrainTestValSplitter,
 )
+from omicselector2.training.evaluator import (
+    ClassificationEvaluator,
+    RegressionEvaluator,
+    SurvivalEvaluator,
+)
 
 __all__ = [
     "CrossValidator",
     "KFoldSplitter",
     "StratifiedKFoldSplitter",
     "TrainTestValSplitter",
+    "ClassificationEvaluator",
+    "RegressionEvaluator",
+    "SurvivalEvaluator",
 ]
