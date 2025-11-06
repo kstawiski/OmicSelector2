@@ -32,4 +32,10 @@ Survival Analysis:
     - DeepSurv
 """
 
-__all__ = []
+from omicselector2.models.base import BaseClassifier, BaseModel, BaseRegressor
+
+__all__ = [
+    "BaseModel",
+    "BaseClassifier",
+    "BaseRegressor",
+]
