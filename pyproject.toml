@@ -52,6 +52,7 @@ dependencies = [
     # Deep Learning
     "torch>=2.1.0",
     "torchvision>=0.16.0",
+    "pytorch-tabnet>=4.0",
 
     # Job Queue
     "celery[redis]>=5.3.0",
@@ -184,6 +185,7 @@ known_third_party = [
     "pandas",
     "sklearn",
     "torch",
+    "pytorch_tabnet",
     "celery",
     "sqlalchemy",
 ]
@@ -215,6 +217,7 @@ module = [
     "pysam.*",
     "pyradiomics.*",
     "torch_geometric.*",
+    "pytorch_tabnet.*",
 ]
 ignore_missing_imports = true
 

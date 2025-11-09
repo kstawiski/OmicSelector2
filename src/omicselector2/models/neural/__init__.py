@@ -5,6 +5,15 @@ Deep learning models for omics data:
 - Autoencoders (standard, variational, sparse, concrete)
 - Attention mechanisms
 - Multi-layer perceptrons
+- TabNet (attention-based tabular learning)
 """
 
-__all__ = []
+from omicselector2.models.neural.tabnet_models import (
+    TabNetClassifier,
+    TabNetRegressor,
+)
+
+__all__ = [
+    "TabNetClassifier",
+    "TabNetRegressor",
+]
