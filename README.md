@@ -8,13 +8,19 @@
 
 OmicSelector2 is a modernized, Python-native platform for automated feature selection and multi-modal integration using state-of-the-art deep learning methods. It transitions from OmicSelector 1.0's R-based architecture to leverage the full power of the Python ecosystem for biomarker discovery in cancer research.
 
-## 🎯 Key Features
+## 🎯 Key Features (v1.0)
 
 - **Automated Benchmarking**: Test multiple feature selection methods and select signatures most resilient to overfitting
-- **Multi-Omics Integration**: Native support for scRNA-seq, bulk RNA-seq, WES, methylation, CNV, and radiomics
-- **State-of-the-Art Models**: Graph Neural Networks (GNNs), Variational Autoencoders (VAEs), attention mechanisms
-- **Clinical Translatability**: Interpretable models (SHAP), stability selection, rigorous hold-out validation
-- **Production-Ready**: FastAPI backend, Celery job queue, MLflow experiment tracking, PostgreSQL + S3 storage
+- **12 Priority 1 Feature Selection Methods**: Lasso, Elastic Net, Random Forest VI, XGBoost, Boruta, mRMR, ReliefF, and more
+- **Ensemble & Stability Selection**: Robust feature sets through voting and bootstrap aggregation
+- **Advanced Training Infrastructure**: Callbacks (early stopping, checkpointing), hyperparameter optimization (Optuna), cross-validation
+- **Comprehensive Model Library**: Random Forest, XGBoost, Logistic Regression, SVM
+- **Production-Quality Code**: 468+ tests, >80% coverage, strict TDD, full type hints
+
+### Coming in v2.0
+- FastAPI backend, Celery job queue, React frontend
+- Multi-omics integration (GNNs, VAEs, attention mechanisms)
+- MLflow experiment tracking, PostgreSQL + S3 storage
 
 ## 🚀 Quick Start
 
@@ -39,35 +45,47 @@ pre-commit install
 ### Basic Usage
 
 ```python
-from omicselector2 import OmicSelector
+import pandas as pd
+from omicselector2.features.classical.random_forest import RandomForestSelector
+from omicselector2.features.ensemble import EnsembleSelector
+from omicselector2.models.classical import RandomForestClassifier
+from omicselector2.training.trainer import Trainer
+from omicselector2.training.callbacks import EarlyStopping
 
-# Initialize client
-client = OmicSelector(api_url="http://localhost:8000", api_key="your-key")
+# Load your data
+X = pd.read_csv("gene_expression.csv", index_col=0)
+y = pd.read_csv("outcomes.csv", index_col=0).squeeze()
 
-# Upload data
-dataset = client.upload_data(
-    file="cancer_rnaseq_counts.csv",
-    data_type="bulk_rna_seq"
+# Feature selection with Random Forest
+selector = RandomForestSelector(
+    n_estimators=100,
+    n_features_to_select=50,
+    random_state=42
 )
+X_selected = selector.fit_transform(X, y)
 
-# Run feature selection
-job = client.create_feature_selection_job(
-    dataset_id=dataset.id,
-    methods=["lasso", "elastic_net", "rf_importance"],
-    config={"cv_folds": 5, "stability": {"enabled": True}}
+# Train model with callbacks
+model = RandomForestClassifier(n_estimators=200, random_state=42)
+trainer = Trainer(
+    model=model,
+    callbacks=[EarlyStopping(monitor='val_auc', patience=5)]
 )
+history = trainer.fit(X_train, y_train, X_val=X_val, y_val=y_val)
 
-# Get results
-results = client.get_results(job.id)
-print(results.stable_features)
+print(f"Best val AUC: {max(history['val_auc']):.3f}")
 ```
+
+See the [examples/](examples/) directory for complete tutorials!
 
 ## 📚 Documentation
 
-- **User Guide**: [docs/user_guide/](docs/user_guide/)
-- **API Reference**: [docs/api/](docs/api/)
-- **Developer Guide**: [docs/developer/](docs/developer/)
-- **Examples**: [docs/examples/](docs/examples/)
+- **Tutorial Notebooks**: [examples/](examples/)
+  - [01_basic_feature_selection.ipynb](examples/01_basic_feature_selection.ipynb)
+  - [02_hyperparameter_tuning.ipynb](examples/02_hyperparameter_tuning.ipynb)
+  - [03_signature_benchmarking.ipynb](examples/03_signature_benchmarking.ipynb)
+- **Implementation Status**: [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)
+- **Development Guide**: [CLAUDE.md](CLAUDE.md)
+- **Changelog**: [CHANGELOG.md](CHANGELOG.md)
 
 ## 🏗️ Architecture
 
@@ -86,32 +104,61 @@ omicselector2/
 └── docker/                     # Docker configurations
 ```
 
-## 🧬 Supported Methods
+## 🧬 Supported Methods (v1.0)
 
-### Feature Selection (Priority 1)
+### Feature Selection - ALL 12 Priority 1 Methods ✅
 
-**Classical:**
-- Lasso, Elastic Net
-- Random Forest Variable Importance (RF-VI)
-- XGBoost Feature Importance
-- Boruta, mRMR, ReliefF
+**Classical Statistical (4/4):**
+- ✅ Lasso (L1 regularization)
+- ✅ Elastic Net (L1 + L2 regularization)
+- ✅ t-test/ANOVA (statistical filtering)
+- ✅ Cox Proportional Hazards (survival analysis)
 
-**Advanced:**
-- Stability Selection Framework
-- Graph Neural Network Importance
-- Concrete Autoencoders
-- INVASE (Instance-wise Variable Selection)
+**Tree-Based (3/3):**
+- ✅ Random Forest Variable Importance (RF-VI)
+- ✅ XGBoost Feature Importance
+- ✅ Boruta (all-relevant selection)
 
-**Single-Cell Specific:**
-- HDG (High-Deviation Genes)
-- FEAST (Fast Entropy-based Active Set Testing)
-- DUBStepR
+**Filter Methods (3/3):**
+- ✅ mRMR (Minimum Redundancy Maximum Relevance)
+- ✅ ReliefF (instance-based)
+- ✅ Variance Threshold
 
-### Multi-Omics Integration
+**Embedded (2/2):**
+- ✅ L1-SVM
+- ✅ Ridge Regression
 
-- **GNNs**: Heterogeneous graph neural networks, MOGDx, Geometric GNN
-- **Attention**: Multi-omics self-attention, MORE framework
-- **VAEs**: MultiVI, conditional VAE
+**Additional:**
+- ✅ Correlation Filter
+- ✅ Ensemble Selector (majority/soft voting, consensus ranking)
+- ✅ Stability Selection (bootstrap-based)
+
+**Single-Cell:**
+- ✅ HDG (High-Deviation Genes)
+- ✅ HEG (High-Expression Genes)
+
+### Machine Learning Models ✅
+
+- ✅ Random Forest (Classifier & Regressor)
+- ✅ XGBoost (Classifier & Regressor)
+- ✅ Logistic Regression
+- ✅ SVM Classifier
+
+### Training Infrastructure ✅
+
+- ✅ Callbacks (EarlyStopping, ModelCheckpoint, ProgressLogger)
+- ✅ Hyperparameter Optimization (Optuna integration)
+- ✅ Cross-Validation (K-Fold, Stratified K-Fold)
+- ✅ Evaluators (Classification, Regression, Survival)
+- ✅ Signature Benchmarking
+
+### Coming in v2.0+ 🚧
+
+- Graph Neural Networks (GNNs), VAEs, Attention mechanisms
+- Multi-omics integration frameworks (MOGDx, MOGONET)
+- FastAPI backend, Celery job queue, React frontend
+- Radiomics pipeline (PyRadiomics integration)
+- Advanced single-cell (FEAST, DUBStepR, scvi-tools)
 
 ## 🛠️ Development
 
@@ -173,24 +220,27 @@ docker-compose down
 
 ## 🧪 Testing
 
-We follow strict Test-Driven Development (TDD):
+We follow strict Test-Driven Development (TDD) with **468+ tests** and **>80% code coverage**:
 
 ```bash
-# Run all tests
-pytest
-
-# Run unit tests only
-pytest tests/unit -m unit
-
-# Run integration tests
-pytest tests/integration -m integration
+# Run all tests (468+ tests)
+PYTHONPATH=src:$PYTHONPATH python -m pytest tests/unit
 
 # Run specific test file
-pytest tests/unit/test_features/test_lasso.py
+PYTHONPATH=src:$PYTHONPATH python -m pytest tests/unit/test_features/test_lasso.py -v
+
+# Run with coverage
+PYTHONPATH=src:$PYTHONPATH python -m pytest tests/unit --cov=src/omicselector2 --cov-report=html
 
 # Skip slow tests
-pytest -m "not slow"
+PYTHONPATH=src:$PYTHONPATH python -m pytest tests/unit -m "not slow"
 ```
+
+**Test Breakdown:**
+- Feature Selection: 250+ tests (all 12 Priority 1 methods)
+- Models: 29+ tests (RF, XGBoost, LogisticRegression, SVM)
+- Training: 144+ tests (Trainer, Callbacks, Hyperparameter, CV, Evaluator, Benchmarking)
+- Data: Tests for loaders, validators, preprocessors
 
 ## 📖 Citation
 
