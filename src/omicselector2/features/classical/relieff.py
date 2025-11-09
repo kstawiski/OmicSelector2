@@ -190,14 +190,12 @@ class ReliefFSelector(BaseFeatureSelector):
             instance_class = y[idx]
 
             # Find k nearest neighbors
-            distances, indices = knn.kneighbors(instance)
+            _, indices = knn.kneighbors(instance)
             indices = indices[0][1:]  # Exclude instance itself
-            distances = distances[0][1:]
 
             # Separate hits (same class) and misses (different class)
             neighbor_classes = y[indices]
             hits_mask = neighbor_classes == instance_class
-            misses_mask = ~hits_mask
 
             # Update weights for hits (same class)
             if np.any(hits_mask):
