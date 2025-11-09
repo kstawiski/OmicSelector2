@@ -169,10 +169,8 @@ class TestmRMRSelector:
             assert len(selector.selected_features_) == n_features
             assert selector.transform(X).shape[1] == n_features
 
-    def test_invalid_n_features(self, sample_classification_data) -> None:
+    def test_invalid_n_features(self) -> None:
         """Test invalid n_features_to_select raises ValueError."""
-        X, y = sample_classification_data
-
         with pytest.raises(ValueError, match="n_features_to_select must be positive"):
             mRMRSelector(n_features_to_select=0)
 

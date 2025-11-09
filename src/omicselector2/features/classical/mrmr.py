@@ -199,9 +199,6 @@ class mRMRSelector(BaseFeatureSelector):
         """
         mrmr_scores = []
 
-        # Get selected features data
-        X_selected = X.iloc[:, selected_indices].values
-
         for idx in remaining_indices:
             # Relevance (already calculated)
             relevance = self.relevance_[idx]
