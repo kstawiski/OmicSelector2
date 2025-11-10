@@ -15,7 +15,7 @@ OmicSelector2 is a modernized, Python-native platform for automated feature sele
 - **Ensemble & Stability Selection**: Robust feature sets through voting and bootstrap aggregation
 - **Advanced Training Infrastructure**: Callbacks (early stopping, checkpointing), hyperparameter optimization (Optuna), cross-validation
 - **Comprehensive Model Library**: Random Forest, XGBoost, Logistic Regression, SVM
-- **Production-Quality Code**: 457 tests passing (v1.0 core), >80% coverage, strict TDD, full type hints
+- **Production-Quality Code**: 468 tests passing (v1.0 core), >80% coverage, strict TDD, full type hints
 
 ### Coming in v2.0
 - FastAPI backend, Celery job queue, React frontend
@@ -46,6 +46,7 @@ pre-commit install
 
 ```python
 import pandas as pd
+from sklearn.model_selection import train_test_split
 from omicselector2.features.classical.random_forest import RandomForestSelector
 from omicselector2.features.ensemble import EnsembleSelector
 from omicselector2.models.classical import RandomForestClassifier
@@ -63,6 +64,11 @@ selector = RandomForestSelector(
     random_state=42
 )
 X_selected = selector.fit_transform(X, y)
+
+# Split data for training and validation
+X_train, X_val, y_train, y_val = train_test_split(
+    X_selected, y, test_size=0.2, random_state=42, stratify=y
+)
 
 # Train model with callbacks
 model = RandomForestClassifier(n_estimators=200, random_state=42)
@@ -220,17 +226,21 @@ docker-compose down
 
 ## 🧪 Testing
 
-We follow strict Test-Driven Development (TDD) with **457 passing tests** (v1.0 core) and **>80% code coverage**:
+We follow strict Test-Driven Development (TDD) with **468 passing tests** (v1.0 core) and **>80% code coverage**:
 
 ```bash
-# Run all v1.0 tests (457 passing)
-PYTHONPATH=src:$PYTHONPATH python -m pytest tests/unit --ignore=tests/unit/test_api --ignore=tests/unit/test_utils/test_config.py --ignore=tests/unit/test_features/test_cox.py --ignore=tests/unit/test_models/test_tabnet.py
+# Run all v1.0 tests (468 passing) - configuration in pytest.ini
+PYTHONPATH=src:$PYTHONPATH python -m pytest tests/unit
 
 # Run specific test file
 PYTHONPATH=src:$PYTHONPATH python -m pytest tests/unit/test_features/test_lasso.py -v
 
 # Run with coverage
 PYTHONPATH=src:$PYTHONPATH python -m pytest tests/unit --cov=src/omicselector2 --cov-report=html
+
+# Run only fast tests (skip slow hyperparameter optimization tests)
+PYTHONPATH=src:$PYTHONPATH python -m pytest tests/unit -m "not slow"
+```
 
 # Skip slow tests
 PYTHONPATH=src:$PYTHONPATH python -m pytest tests/unit -m "not slow"
