@@ -18,6 +18,22 @@ except ImportError:
     EmailStr = str  # type: ignore
     Field = None  # type: ignore
 
+try:
+    from sqlalchemy.orm import Session
+
+    SQLALCHEMY_AVAILABLE = True
+except ImportError:
+    SQLALCHEMY_AVAILABLE = False
+    Session = None  # type: ignore
+
+from omicselector2.api.dependencies import get_current_user as get_auth_user
+from omicselector2.db import User, UserRole, get_db
+from omicselector2.utils.security import (
+    create_access_token,
+    hash_password,
+    verify_password,
+)
+
 
 # Request/Response Models
 class UserRegisterRequest(BaseModel):
@@ -86,11 +102,14 @@ else:
     router = APIRouter()
 
     @router.post("/register", response_model=UserResponse, status_code=201)
-    async def register(user_data: UserRegisterRequest):
+    async def register(
+        user_data: UserRegisterRequest, db: Session = Depends(get_db)
+    ):
         """Register a new user.
 
         Args:
             user_data: User registration data
+            db: Database session
 
         Returns:
             Created user information
@@ -98,21 +117,65 @@ else:
         Raises:
             HTTPException: If username or email already exists
         """
-        # TODO: Implement user registration
-        # - Hash password
-        # - Create user in database
-        # - Return user info
-        raise HTTPException(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail="Registration endpoint not yet implemented",
+        if not SQLALCHEMY_AVAILABLE:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Database not available",
+            )
+
+        # Check if user already exists
+        existing_user = (
+            db.query(User)
+            .filter(
+                (User.email == user_data.email) | (User.username == user_data.username)
+            )
+            .first()
+        )
+
+        if existing_user:
+            if existing_user.email == user_data.email:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Email already registered",
+                )
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Username already taken",
+                )
+
+        # Hash password
+        hashed_password = hash_password(user_data.password)
+
+        # Create new user
+        new_user = User(
+            email=user_data.email,
+            username=user_data.username,
+            hashed_password=hashed_password,
+            full_name=user_data.full_name,
+            role=UserRole.USER,  # Default role
+            is_active=True,
+        )
+
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+
+        return UserResponse(
+            id=str(new_user.id),
+            email=new_user.email,
+            username=new_user.username,
+            full_name=new_user.full_name,
+            role=new_user.role.value,
         )
 
     @router.post("/login", response_model=TokenResponse)
-    async def login(credentials: LoginRequest):
+    async def login(credentials: LoginRequest, db: Session = Depends(get_db)):
         """Authenticate user and return access token.
 
         Args:
             credentials: Login credentials
+            db: Database session
 
         Returns:
             JWT access token
@@ -120,18 +183,59 @@ else:
         Raises:
             HTTPException: If credentials are invalid
         """
-        # TODO: Implement login
-        # - Verify credentials
-        # - Generate JWT token
-        # - Return token
-        raise HTTPException(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail="Login endpoint not yet implemented",
+        if not SQLALCHEMY_AVAILABLE:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Database not available",
+            )
+
+        # Find user by username or email
+        user = (
+            db.query(User)
+            .filter(
+                (User.username == credentials.username)
+                | (User.email == credentials.username)
+            )
+            .first()
+        )
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect username or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        # Verify password
+        if not verify_password(credentials.password, user.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect username or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        # Check if user is active
+        if not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Inactive user account",
+            )
+
+        # Create access token
+        access_token = create_access_token(data={"sub": str(user.id)})
+
+        return TokenResponse(
+            access_token=access_token,
+            token_type="bearer",
+            expires_in=3600,  # 60 minutes in seconds
         )
 
     @router.get("/me", response_model=UserResponse)
-    async def get_current_user():
+    async def get_me(current_user: User = Depends(get_auth_user)):
         """Get current authenticated user information.
+
+        Args:
+            current_user: Current authenticated user
 
         Returns:
             Current user information
@@ -139,13 +243,12 @@ else:
         Raises:
             HTTPException: If not authenticated
         """
-        # TODO: Implement get current user
-        # - Verify JWT token
-        # - Get user from database
-        # - Return user info
-        raise HTTPException(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail="Get current user endpoint not yet implemented",
+        return UserResponse(
+            id=str(current_user.id),
+            email=current_user.email,
+            username=current_user.username,
+            full_name=current_user.full_name,
+            role=current_user.role.value,
         )
 
     @router.post("/logout")
