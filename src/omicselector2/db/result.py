@@ -56,7 +56,7 @@ if SQLALCHEMY_AVAILABLE:
         )
 
         # Relationships
-        # job = relationship("Job", back_populates="result")
+        job = relationship("Job", back_populates="result")
 
         def __repr__(self) -> str:
             """String representation of Result.

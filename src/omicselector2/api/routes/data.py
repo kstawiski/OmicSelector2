@@ -140,8 +140,11 @@ else:
         try:
             storage_client = get_storage_client()
             file_content = await file.read()
+            # Wrap bytes in BytesIO for upload_fileobj
+            import io
+            file_obj = io.BytesIO(file_content)
             s3_path = storage_client.upload_file(
-                file_obj=file_content,
+                file_obj=file_obj,
                 object_name=object_name,
                 metadata={
                     "original_filename": file.filename or "unknown",
@@ -169,7 +172,7 @@ else:
             file_path=s3_path,
             n_samples=n_samples,
             n_features=n_features,
-            metadata={
+            metadata_json={
                 "original_filename": file.filename,
                 "file_size_bytes": len(file_content),
                 "content_type": file.content_type,

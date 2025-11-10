@@ -159,15 +159,28 @@ class Trainer:
         for callback in self.callbacks:
             callback.on_train_begin(self)
 
-        # For classical models, we only fit once
-        # (epochs > 1 would be for neural models with iterative training)
-        for epoch in range(1, epochs + 1):
+        # Check if model supports incremental training (has partial_fit method)
+        has_partial_fit = hasattr(self.model.model, 'partial_fit')
+        
+        # For classical models without partial_fit, fit only once (epochs is ignored)
+        # For models with partial_fit, the loop allows iterative training
+        actual_epochs = epochs if has_partial_fit else 1
+        
+        for epoch in range(1, actual_epochs + 1):
             # Trigger on_epoch_begin callbacks
             for callback in self.callbacks:
                 callback.on_epoch_begin(epoch, self)
 
             # Fit model on training data
-            self.model.fit(X, y)
+            # Classical models are fit only once (outside loop when actual_epochs=1)
+            # Models with partial_fit can train incrementally
+            if epoch == 1 or has_partial_fit:
+                if has_partial_fit and epoch > 1:
+                    # Use partial_fit for incremental training
+                    self.model.model.partial_fit(X, y)
+                else:
+                    # First epoch or models without partial_fit use regular fit
+                    self.model.fit(X, y)
 
             # Compute training metrics
             y_train_pred = self.model.predict(X)

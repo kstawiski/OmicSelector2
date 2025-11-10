@@ -57,7 +57,7 @@ if SQLALCHEMY_AVAILABLE:
             file_path: Path to data file in S3/MinIO
             n_samples: Number of samples in dataset
             n_features: Number of features in dataset
-            metadata: Additional metadata (JSONB)
+            metadata_json: Additional metadata (JSONB) - maps to 'metadata' column
             owner_id: ID of user who owns this dataset
             created_at: Dataset creation timestamp
 
@@ -79,7 +79,7 @@ if SQLALCHEMY_AVAILABLE:
         file_path = Column(String(500), nullable=True)  # S3/MinIO path
         n_samples = Column(Integer, nullable=True)
         n_features = Column(Integer, nullable=True)
-        metadata = Column(JSONB, nullable=True)  # Flexible metadata storage
+        metadata_json = Column("metadata", JSONB, nullable=True)  # Flexible metadata storage
 
         # Foreign keys
         owner_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
@@ -89,9 +89,9 @@ if SQLALCHEMY_AVAILABLE:
             DateTime(timezone=True), server_default=func.now(), nullable=False
         )
 
-        # Relationships (back_populates will be set in User model)
-        # owner = relationship("User", back_populates="datasets")
-        # jobs = relationship("Job", back_populates="dataset")
+        # Relationships
+        owner = relationship("User", back_populates="datasets")
+        jobs = relationship("Job", back_populates="dataset")
 
         def __repr__(self) -> str:
             """String representation of Dataset.
