@@ -110,15 +110,11 @@
 - ✅ Performance ranking
 - ✅ 12 tests for benchmarking
 
-**Total Test Suite:** 418 tests (57 new Phase 5 tests)
+**Total Test Suite:** 468 tests (57 new Phase 5 tests + 50 ElasticNet/RandomForest tests)
 
 ---
 
 ## 🔄 **PARTIALLY IMPLEMENTED / NEEDS COMPLETION**
-
-### **Missing Dedicated Tests:**
-- ⚠️ **ElasticNetSelector** - Implementation exists, used in ensemble tests, but no dedicated test file
-- ⚠️ **RandomForestSelector** - Implementation exists, used in ensemble tests, but no dedicated test file
 
 ### **Phase 5 Optional Components:**
 - ⏭️ **MLflow Integration** - Experiment tracking (marked as optional in CLAUDE.md Phase 5)
@@ -223,11 +219,11 @@
 
 ### **Code Statistics:**
 - **Production Code**: ~15,000+ lines
-- **Test Code**: 418 tests across 35+ test files
+- **Test Code**: 468 tests across 37+ test files
 - **Test Coverage**: >80% (target met for critical modules)
-- **Recent Additions** (Phase 5):
+- **Recent Additions** (Phases 4-5 + ElasticNet/RandomForest):
   - 1,008 lines of production code
-  - 57 new tests
+  - 107 new tests (57 Phase 5 + 50 ElasticNet/RandomForest)
   - 100% TDD compliance
 
 ### **Git Status:**
@@ -361,7 +357,7 @@
 - Callbacks use sophisticated patience logic with min_delta support
 
 ### **Test Coverage Achievements:**
-- 418 total tests
+- 468 total tests
 - >80% coverage on critical modules
 - Comprehensive edge case testing
 - Mock objects for isolated testing
@@ -491,7 +487,7 @@ The knowledge files emphasize that OmicSelector2 v2.0+ should focus on **multi-m
 **Document Status**: v1.0 COMPLETE, v2.0 IN PROGRESS
 **Confidence Level**: HIGH (v1.0), MEDIUM (v2.0 infrastructure)
 **Recommendation**:
-- ✅ v1.0 ready for release (457 tests passing)
+- ✅ v1.0 ready for release (468 tests passing)
 - 🚧 v2.0 infrastructure established, implement endpoints next
 - 📝 Create v1.0 release PR
 - 🔨 Continue v2.0 API endpoint implementation

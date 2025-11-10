@@ -3,8 +3,12 @@
 This module provides endpoints for uploading, managing, and accessing datasets.
 """
 
+import logging
 import uuid
 from typing import Optional
+from urllib.parse import urlparse
+
+logger = logging.getLogger(__name__)
 
 try:
     from fastapi import (
@@ -140,8 +144,11 @@ else:
         try:
             storage_client = get_storage_client()
             file_content = await file.read()
+            # Wrap bytes in BytesIO for upload_fileobj
+            import io
+            file_obj = io.BytesIO(file_content)
             s3_path = storage_client.upload_file(
-                file_obj=file_content,
+                file_obj=file_obj,
                 object_name=object_name,
                 metadata={
                     "original_filename": file.filename or "unknown",
@@ -169,7 +176,7 @@ else:
             file_path=s3_path,
             n_samples=n_samples,
             n_features=n_features,
-            metadata={
+            metadata_json={
                 "original_filename": file.filename,
                 "file_size_bytes": len(file_content),
                 "content_type": file.content_type,
@@ -352,12 +359,21 @@ else:
         if dataset.file_path:
             try:
                 storage_client = get_storage_client()
-                # Extract object name from s3://bucket/path
-                object_name = dataset.file_path.split(f"s3://{storage_client.bucket_name}/")[1]
-                storage_client.delete_file(object_name)
-            except Exception:
-                # Continue even if S3 deletion fails
-                pass
+                # Parse S3 URI to extract object name robustly
+                parsed_uri = urlparse(dataset.file_path)
+                if parsed_uri.scheme == "s3":
+                    # Remove leading slash from path
+                    object_name = parsed_uri.path.lstrip("/")
+                    storage_client.delete_file(object_name)
+                    logger.info(f"Deleted S3 object: {object_name}")
+                else:
+                    logger.warning(f"Unexpected file_path format: {dataset.file_path}")
+            except Exception as e:
+                # Log error but continue with database deletion
+                logger.error(
+                    f"Failed to delete S3 file for dataset {dataset.id}: {str(e)}",
+                    exc_info=True
+                )
 
         # Delete database record
         db.delete(dataset)

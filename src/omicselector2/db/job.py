@@ -124,9 +124,9 @@ if SQLALCHEMY_AVAILABLE:
         )
 
         # Relationships
-        # user = relationship("User", back_populates="jobs")
-        # dataset = relationship("Dataset", back_populates="jobs")
-        # result = relationship("Result", back_populates="job", uselist=False)
+        user = relationship("User", back_populates="jobs")
+        dataset = relationship("Dataset", back_populates="jobs")
+        result = relationship("Result", back_populates="job", uselist=False)
 
         def __repr__(self) -> str:
             """String representation of Job.

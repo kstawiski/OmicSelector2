@@ -76,9 +76,9 @@ if SQLALCHEMY_AVAILABLE:
         )
         updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-        # Relationships (will be defined when other models are created)
-        # datasets = relationship("Dataset", back_populates="owner")
-        # jobs = relationship("Job", back_populates="user")
+        # Relationships
+        datasets = relationship("Dataset", back_populates="owner")
+        jobs = relationship("Job", back_populates="user")
 
         def __repr__(self) -> str:
             """String representation of User.
