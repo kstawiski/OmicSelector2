@@ -174,13 +174,12 @@ class Trainer:
             # Fit model on training data
             # Classical models are fit only once (outside loop when actual_epochs=1)
             # Models with partial_fit can train incrementally
-            if epoch == 1 or has_partial_fit:
-                if has_partial_fit and epoch > 1:
-                    # Use partial_fit for incremental training
-                    self.model.model.partial_fit(X, y)
-                else:
-                    # First epoch or models without partial_fit use regular fit
-                    self.model.fit(X, y)
+            if has_partial_fit and epoch > 1:
+                # Use partial_fit for incremental training
+                self.model.model.partial_fit(X, y)
+            else:
+                # First epoch or models without partial_fit use regular fit
+                self.model.fit(X, y)
 
             # Compute training metrics
             y_train_pred = self.model.predict(X)

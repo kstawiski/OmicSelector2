@@ -242,10 +242,6 @@ PYTHONPATH=src:$PYTHONPATH python -m pytest tests/unit --cov=src/omicselector2 -
 PYTHONPATH=src:$PYTHONPATH python -m pytest tests/unit -m "not slow"
 ```
 
-# Skip slow tests
-PYTHONPATH=src:$PYTHONPATH python -m pytest tests/unit -m "not slow"
-```
-
 **Test Breakdown:**
 - Feature Selection: 250+ tests (all 12 Priority 1 methods)
 - Models: 29+ tests (RF, XGBoost, LogisticRegression, SVM)
