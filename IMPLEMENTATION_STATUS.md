@@ -389,6 +389,109 @@ The knowledge files emphasize that OmicSelector2 v2.0+ should focus on **multi-m
 
 ---
 
-**Document Status**: FINAL
-**Confidence Level**: HIGH
-**Recommendation**: Ready for v1.0 completion and release planning
+## 🚀 **v2.0 INFRASTRUCTURE (IN PROGRESS - November 10, 2025)**
+
+### **Core Infrastructure Completed:**
+
+#### **Database Layer (PostgreSQL + SQLAlchemy)**
+- ✅ User model (authentication, RBAC with USER/RESEARCHER/ADMIN roles)
+- ✅ Dataset model (multi-omic data storage with JSONB metadata)
+- ✅ Job model (asynchronous analysis job tracking)
+- ✅ Result model (job outputs with ARRAY/JSONB storage)
+- ✅ Database connection management with session pooling
+- ✅ Graceful degradation when SQLAlchemy not installed
+- **Location**: `src/omicselector2/db/`
+- **Models**: `user.py`, `dataset.py`, `job.py`, `result.py`, `database.py`
+- **Features**: UUID primary keys, JSONB flexibility, PostgreSQL ARRAY, relationships
+
+#### **API Layer (FastAPI)**
+- ✅ Main FastAPI application with CORS middleware
+- ✅ Health check endpoints (/health, /healthz, /readyz)
+- ✅ API info endpoint (/api/v1/info)
+- ✅ Authentication routes (register, login, me, logout) - skeleton
+- ✅ Async lifespan management
+- ✅ OpenAPI documentation (/docs, /redoc)
+- **Location**: `src/omicselector2/api/`
+- **Files**: `main.py`, `routes/auth.py`
+- **Status**: Basic structure ready, endpoints need full implementation
+
+#### **Job Queue (Celery + Redis)**
+- ✅ Celery application factory
+- ✅ Task serialization configuration (JSON)
+- ✅ Task routing (default, high_priority queues)
+- ✅ Worker configuration (prefetch, timeouts, acks late)
+- ✅ Result expiration (24 hours)
+- **Location**: `src/omicselector2/tasks/__init__.py`
+- **Configuration**: Broker=Redis, Backend=Redis, 1h hard limit
+
+#### **Docker Development Environment**
+- ✅ docker-compose.yml with 7 services:
+  - PostgreSQL 15 (health checks, persistent volumes)
+  - Redis 7 (Celery broker + cache)
+  - MinIO (S3-compatible object storage)
+  - FastAPI API (hot reload, port 8000)
+  - Celery worker (CPU tasks)
+  - Flower (Celery monitoring, port 5555)
+  - MLflow (experiment tracking, port 5000)
+- ✅ Dockerfile.api (FastAPI container)
+- ✅ Dockerfile.worker (Celery worker with ML deps)
+- ✅ Network isolation (omicselector2_network)
+- **Location**: `docker-compose.yml`, `docker/`
+
+#### **Documentation**
+- ✅ Comprehensive v2.0 architecture plan
+  - System architecture diagrams
+  - Database schema design
+  - API endpoint specifications (REST + WebSocket)
+  - Celery task definitions
+  - Implementation phases (7 epics)
+  - Security considerations
+  - Testing strategy
+- **Location**: `docs/v2.0_ARCHITECTURE.md` (749 lines)
+
+### **Git Commits (5 commits):**
+1. `20b3cb1` - feat: add PostgreSQL database models with SQLAlchemy
+2. `cdbca8a` - docs: add comprehensive v2.0 architecture plan
+3. `3aabb12` - feat: add Docker Compose development environment
+4. `37b95c6` - feat: add authentication API routes
+5. `01b49ba` - feat: configure Celery job queue with Redis
+
+### **What's Next for v2.0:**
+- [ ] Implement JWT authentication (bcrypt password hashing, token generation)
+- [ ] Add FastAPI dependencies (auth middleware, database session injection)
+- [ ] Create data upload endpoints (multipart/form-data handling)
+- [ ] Implement job submission endpoints (feature selection, training)
+- [ ] Add job status tracking (WebSocket for real-time updates)
+- [ ] Create result retrieval endpoints
+- [ ] Implement Celery tasks (feature_selection, model_training)
+- [ ] Write integration tests (API + worker workflows)
+- [ ] Add S3/MinIO client for file storage
+- [ ] Set up Alembic for database migrations
+
+### **v2.0 Technology Stack:**
+- **Backend**: FastAPI (async, OpenAPI docs)
+- **Database**: PostgreSQL 15+ (ACID, JSONB, ARRAY)
+- **Job Queue**: Celery + Redis (async processing)
+- **Storage**: MinIO (S3-compatible)
+- **Experiment Tracking**: MLflow
+- **Monitoring**: Flower (Celery), health endpoints
+- **Deployment**: Docker Compose → Kubernetes (future)
+
+### **v2.0 Architecture Highlights:**
+- Microservices-ready (API, workers, database separate containers)
+- Async job processing for long-running analyses
+- Real-time progress updates via WebSockets (planned)
+- Role-based access control (USER, RESEARCHER, ADMIN)
+- Flexible metadata storage (JSONB for experiments)
+- Scalable worker pools (CPU, GPU queues planned)
+- Production-ready infrastructure (health checks, monitoring)
+
+---
+
+**Document Status**: v1.0 COMPLETE, v2.0 IN PROGRESS
+**Confidence Level**: HIGH (v1.0), MEDIUM (v2.0 infrastructure)
+**Recommendation**:
+- ✅ v1.0 ready for release (457 tests passing)
+- 🚧 v2.0 infrastructure established, implement endpoints next
+- 📝 Create v1.0 release PR
+- 🔨 Continue v2.0 API endpoint implementation
