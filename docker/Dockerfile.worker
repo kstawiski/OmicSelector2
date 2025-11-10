@@ -1,0 +1,29 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements
+COPY pyproject.toml setup.py ./
+
+# Install Python dependencies (including ML libraries)
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -e ".[all]" || pip install --no-cache-dir -e .
+
+# Copy application code
+COPY src/ ./src/
+
+# Create non-root user
+RUN useradd -m -u 1000 appuser && \
+    chown -R appuser:appuser /app
+
+USER appuser
+
+# Run Celery worker
+CMD ["celery", "-A", "omicselector2.tasks", "worker", "--loglevel=info", "--concurrency=2"]
