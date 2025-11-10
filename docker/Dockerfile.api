@@ -15,7 +15,7 @@ COPY pyproject.toml setup.py ./
 
 # Install Python dependencies
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -e ".[api]" || pip install --no-cache-dir -e .
+    pip install --no-cache-dir -e ".[api]"
 
 # Copy application code
 COPY src/ ./src/
