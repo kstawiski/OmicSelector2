@@ -64,6 +64,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Register API routers
+from omicselector2.api.routes import auth, data
+
+app.include_router(
+    auth.router,
+    prefix="/api/v1/auth",
+    tags=["authentication"],
+)
+app.include_router(
+    data.router,
+    prefix="/api/v1/data",
+    tags=["data"],
+)
+
 
 @app.get("/", tags=["Health"])
 async def root() -> dict[str, str]:

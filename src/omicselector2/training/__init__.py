@@ -14,6 +14,12 @@ from omicselector2.training.benchmarking import (
     Benchmarker,
     SignatureBenchmark,
 )
+from omicselector2.training.callbacks import (
+    Callback,
+    EarlyStopping,
+    ModelCheckpoint,
+    ProgressLogger,
+)
 from omicselector2.training.cross_validation import (
     CrossValidator,
     KFoldSplitter,
@@ -25,8 +31,18 @@ from omicselector2.training.evaluator import (
     RegressionEvaluator,
     SurvivalEvaluator,
 )
+from omicselector2.training.hyperparameter import (
+    HyperparameterOptimizer,
+    PREDEFINED_SEARCH_SPACES,
+)
+from omicselector2.training.trainer import Trainer
 
 __all__ = [
+    "Trainer",
+    "Callback",
+    "EarlyStopping",
+    "ModelCheckpoint",
+    "ProgressLogger",
     "CrossValidator",
     "KFoldSplitter",
     "StratifiedKFoldSplitter",
@@ -37,4 +53,6 @@ __all__ = [
     "BenchmarkResult",
     "Benchmarker",
     "SignatureBenchmark",
+    "HyperparameterOptimizer",
+    "PREDEFINED_SEARCH_SPACES",
 ]

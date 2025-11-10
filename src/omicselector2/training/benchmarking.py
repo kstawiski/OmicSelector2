@@ -51,7 +51,12 @@ from omicselector2.models.classical import (
     RandomForestClassifier,
     XGBoostClassifier,
 )
-from omicselector2.models.neural import TabNetClassifier
+
+try:
+    from omicselector2.models.neural import TabNetClassifier
+except ImportError:
+    TabNetClassifier = None  # type: ignore
+
 from omicselector2.training.cross_validation import CrossValidator
 from omicselector2.training.evaluator import ClassificationEvaluator
 
