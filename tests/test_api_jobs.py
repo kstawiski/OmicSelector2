@@ -19,10 +19,11 @@ from uuid import uuid4
 from datetime import datetime
 
 from omicselector2.db import Job, JobType, JobStatus, Dataset, DataType, User, UserRole
+from omicselector2.api.routes.jobs import router
 
-# We'll create the router once it's implemented
-# For now, create a minimal app for testing structure
+# Create FastAPI app with jobs router
 app = FastAPI()
+app.include_router(router, prefix="/api/v1/jobs", tags=["jobs"])
 
 
 @pytest.fixture
@@ -69,7 +70,6 @@ class TestCreateJob:
     def test_create_feature_selection_job_success(self, test_client, mock_db, test_user, test_dataset):
         """Test successful feature selection job creation."""
         # This test will fail until we implement the endpoint
-        pytest.skip("Endpoint not yet implemented - TDD RED phase")
 
         from omicselector2.api.dependencies import get_current_user
 
@@ -124,7 +124,6 @@ class TestCreateJob:
 
     def test_create_job_invalid_job_type(self, test_client, test_user):
         """Test job creation with invalid job type."""
-        pytest.skip("Endpoint not yet implemented - TDD RED phase")
 
         from omicselector2.api.dependencies import get_current_user
 
@@ -149,7 +148,6 @@ class TestCreateJob:
 
     def test_create_job_dataset_not_found(self, test_client, mock_db, test_user):
         """Test job creation with non-existent dataset."""
-        pytest.skip("Endpoint not yet implemented - TDD RED phase")
 
         from omicselector2.api.dependencies import get_current_user
 
@@ -178,7 +176,6 @@ class TestCreateJob:
 
     def test_create_job_dataset_access_denied(self, test_client, mock_db, test_user):
         """Test job creation with dataset owned by another user."""
-        pytest.skip("Endpoint not yet implemented - TDD RED phase")
 
         other_user_id = uuid4()
         dataset = Mock(spec=Dataset)
@@ -210,7 +207,6 @@ class TestCreateJob:
 
     def test_create_job_requires_authentication(self, test_client):
         """Test job creation without authentication."""
-        pytest.skip("Endpoint not yet implemented - TDD RED phase")
 
         response = test_client.post(
             "/api/v1/jobs/",
@@ -229,7 +225,6 @@ class TestGetJob:
 
     def test_get_job_success(self, test_client, mock_db, test_user):
         """Test getting job by ID."""
-        pytest.skip("Endpoint not yet implemented - TDD RED phase")
 
         job_id = uuid4()
         mock_job = Mock(spec=Job)
@@ -268,7 +263,6 @@ class TestGetJob:
 
     def test_get_job_not_found(self, test_client, mock_db, test_user):
         """Test getting non-existent job."""
-        pytest.skip("Endpoint not yet implemented - TDD RED phase")
 
         mock_db.query.return_value.filter.return_value.first.return_value = None
 
@@ -288,7 +282,6 @@ class TestGetJob:
 
     def test_get_job_access_denied(self, test_client, mock_db, test_user):
         """Test getting job created by another user."""
-        pytest.skip("Endpoint not yet implemented - TDD RED phase")
 
         job_id = uuid4()
         mock_job = Mock(spec=Job)
@@ -317,7 +310,6 @@ class TestListJobs:
 
     def test_list_jobs_success(self, test_client, mock_db, test_user):
         """Test listing user's jobs."""
-        pytest.skip("Endpoint not yet implemented - TDD RED phase")
 
         # Create mock jobs
         mock_jobs = []
@@ -359,7 +351,6 @@ class TestListJobs:
 
     def test_list_jobs_filter_by_status(self, test_client, mock_db, test_user):
         """Test filtering jobs by status."""
-        pytest.skip("Endpoint not yet implemented - TDD RED phase")
 
         mock_query = Mock()
         mock_query.filter.return_value = mock_query
@@ -388,7 +379,6 @@ class TestCancelJob:
 
     def test_cancel_job_success(self, test_client, mock_db, test_user):
         """Test successful job cancellation."""
-        pytest.skip("Endpoint not yet implemented - TDD RED phase")
 
         job_id = uuid4()
         mock_job = Mock(spec=Job)
@@ -420,7 +410,6 @@ class TestCancelJob:
 
     def test_cancel_completed_job_fails(self, test_client, mock_db, test_user):
         """Test cancelling already completed job."""
-        pytest.skip("Endpoint not yet implemented - TDD RED phase")
 
         job_id = uuid4()
         mock_job = Mock(spec=Job)
@@ -451,7 +440,6 @@ class TestGetJobResult:
 
     def test_get_job_result_success(self, test_client, mock_db, test_user):
         """Test getting result for completed job."""
-        pytest.skip("Endpoint not yet implemented - TDD RED phase")
 
         job_id = uuid4()
         result_id = uuid4()
@@ -502,7 +490,6 @@ class TestGetJobResult:
 
     def test_get_result_job_not_completed(self, test_client, mock_db, test_user):
         """Test getting result for job that's still running."""
-        pytest.skip("Endpoint not yet implemented - TDD RED phase")
 
         job_id = uuid4()
         mock_job = Mock(spec=Job)
