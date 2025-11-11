@@ -24,6 +24,9 @@ from omicselector2.tasks.feature_selection import (
     run_xgboost_feature_selection,
     run_variance_threshold_feature_selection,
     run_ttest_feature_selection,
+    run_l1svm_feature_selection,
+    run_ridge_feature_selection,
+    run_coxph_feature_selection,
 )
 
 
@@ -716,3 +719,294 @@ class TestTTestFeatureSelection:
         # Should achieve reasonable AUC (>0.6) on this dataset
         if len(selected_features) > 0:
             assert metrics["cv_auc_mean"] > 0.6
+
+
+@pytest.fixture
+def survival_dataset():
+    """Create synthetic survival dataset for Cox PH testing."""
+    # Generate dataset with survival times and event indicators
+    X, y_class = make_classification(
+        n_samples=100,
+        n_features=50,
+        n_informative=10,
+        n_redundant=5,
+        n_repeated=0,
+        n_classes=2,
+        random_state=42,
+        shuffle=False
+    )
+
+    # Convert to DataFrame
+    feature_names = [f"GENE_{i}" for i in range(X.shape[1])]
+    X_df = pd.DataFrame(X, columns=feature_names)
+
+    # Generate synthetic survival data
+    np.random.seed(42)
+    # Survival times (in months)
+    times = np.random.exponential(scale=20, size=100) + 1
+    # Event indicators (1 = event occurred, 0 = censored)
+    events = np.random.binomial(1, 0.7, 100)
+
+    # Create survival target DataFrame
+    y_survival = pd.DataFrame({
+        'time': times,
+        'event': events
+    })
+
+    return X_df, y_survival
+
+
+class TestL1SVMFeatureSelection:
+    """Test L1-SVM feature selection algorithm."""
+
+    def test_l1svm_selects_features(self, synthetic_dataset):
+        """Test that L1-SVM selects a subset of features."""
+        X, y = synthetic_dataset
+
+        selected_features, metrics = run_l1svm_feature_selection(
+            X, y, cv=3, n_features=20
+        )
+
+        # Should select some features
+        assert len(selected_features) > 0
+        assert len(selected_features) <= 20
+
+        # All selected features should be from the original feature set
+        assert all(f in X.columns for f in selected_features)
+
+    def test_l1svm_metrics_structure(self, synthetic_dataset):
+        """Test that metrics have expected structure."""
+        X, y = synthetic_dataset
+
+        selected_features, metrics = run_l1svm_feature_selection(
+            X, y, cv=3, n_features=20
+        )
+
+        # Check metrics structure
+        assert "method" in metrics
+        assert metrics["method"] == "l1_svm"
+        assert "n_features_selected" in metrics
+        assert metrics["n_features_selected"] == len(selected_features)
+
+        if len(selected_features) > 0:
+            assert "optimal_C" in metrics
+            assert "cv_auc_mean" in metrics
+            assert "cv_auc_std" in metrics
+            assert "cv_folds" in metrics
+
+            # AUC should be between 0 and 1
+            assert 0 <= metrics["cv_auc_mean"] <= 1
+            assert metrics["cv_auc_std"] >= 0
+
+    def test_l1svm_respects_n_features_limit(self, synthetic_dataset):
+        """Test that L1-SVM respects the n_features limit."""
+        X, y = synthetic_dataset
+
+        # Request only 5 features
+        selected_features, metrics = run_l1svm_feature_selection(
+            X, y, cv=3, n_features=5
+        )
+
+        # Should not select more than requested
+        assert len(selected_features) <= 5
+
+    def test_l1svm_reproducibility(self, synthetic_dataset):
+        """Test that L1-SVM produces reproducible results."""
+        X, y = synthetic_dataset
+
+        # Run twice with same parameters
+        selected_1, metrics_1 = run_l1svm_feature_selection(
+            X, y, cv=3, n_features=10
+        )
+
+        selected_2, metrics_2 = run_l1svm_feature_selection(
+            X, y, cv=3, n_features=10
+        )
+
+        # Should get same features (due to random_state=42)
+        assert selected_1 == selected_2
+
+
+class TestRidgeFeatureSelection:
+    """Test Ridge Regression feature selection algorithm."""
+
+    def test_ridge_selects_features(self, synthetic_dataset):
+        """Test that Ridge selects a subset of features."""
+        X, y = synthetic_dataset
+
+        selected_features, metrics = run_ridge_feature_selection(
+            X, y, cv=3, n_features=20
+        )
+
+        # Should select some features
+        assert len(selected_features) > 0
+        assert len(selected_features) <= 20
+
+        # All selected features should be from the original feature set
+        assert all(f in X.columns for f in selected_features)
+
+    def test_ridge_metrics_structure(self, synthetic_dataset):
+        """Test that metrics have expected structure."""
+        X, y = synthetic_dataset
+
+        selected_features, metrics = run_ridge_feature_selection(
+            X, y, cv=3, n_features=20
+        )
+
+        # Check metrics structure
+        assert "method" in metrics
+        assert metrics["method"] == "ridge"
+        assert "n_features_selected" in metrics
+        assert metrics["n_features_selected"] == len(selected_features)
+
+        if len(selected_features) > 0:
+            assert "optimal_alpha" in metrics
+            assert "cv_auc_mean" in metrics
+            assert "cv_auc_std" in metrics
+            assert "cv_folds" in metrics
+
+            # AUC should be between 0 and 1
+            assert 0 <= metrics["cv_auc_mean"] <= 1
+            assert metrics["cv_auc_std"] >= 0
+
+    def test_ridge_respects_n_features_limit(self, synthetic_dataset):
+        """Test that Ridge respects the n_features limit."""
+        X, y = synthetic_dataset
+
+        # Request only 5 features
+        selected_features, metrics = run_ridge_feature_selection(
+            X, y, cv=3, n_features=5
+        )
+
+        # Should not select more than requested
+        assert len(selected_features) <= 5
+
+    def test_ridge_reproducibility(self, synthetic_dataset):
+        """Test that Ridge produces reproducible results."""
+        X, y = synthetic_dataset
+
+        # Run twice with same parameters
+        selected_1, metrics_1 = run_ridge_feature_selection(
+            X, y, cv=3, n_features=10
+        )
+
+        selected_2, metrics_2 = run_ridge_feature_selection(
+            X, y, cv=3, n_features=10
+        )
+
+        # Should get same features (Ridge is deterministic with same data)
+        assert selected_1 == selected_2
+        assert metrics_1["optimal_alpha"] == metrics_2["optimal_alpha"]
+
+
+class TestCoxPHFeatureSelection:
+    """Test Cox Proportional Hazards feature selection algorithm."""
+
+    def test_coxph_selects_features(self, survival_dataset):
+        """Test that Cox PH selects a subset of features."""
+        X, y_survival = survival_dataset
+
+        selected_features, metrics = run_coxph_feature_selection(
+            X, y_survival, n_features=20
+        )
+
+        # Should select some features
+        assert len(selected_features) > 0
+        assert len(selected_features) <= 20
+
+        # All selected features should be from the original feature set
+        assert all(f in X.columns for f in selected_features)
+
+    def test_coxph_metrics_structure(self, survival_dataset):
+        """Test that metrics have expected structure."""
+        X, y_survival = survival_dataset
+
+        selected_features, metrics = run_coxph_feature_selection(
+            X, y_survival, n_features=20
+        )
+
+        # Check metrics structure
+        assert "method" in metrics
+        assert metrics["method"] == "cox_ph"
+        assert "n_features_selected" in metrics
+        assert metrics["n_features_selected"] == len(selected_features)
+
+        if len(selected_features) > 0:
+            assert "c_index_mean" in metrics
+            assert "c_index_std" in metrics
+            assert "hazard_ratios" in metrics
+
+            # C-index should be between 0 and 1
+            assert 0 <= metrics["c_index_mean"] <= 1
+            assert metrics["c_index_std"] >= 0
+
+    def test_coxph_respects_n_features_limit(self, survival_dataset):
+        """Test that Cox PH respects the n_features limit."""
+        X, y_survival = survival_dataset
+
+        # Request only 5 features
+        selected_features, metrics = run_coxph_feature_selection(
+            X, y_survival, n_features=5
+        )
+
+        # Should not select more than requested
+        assert len(selected_features) <= 5
+
+    def test_coxph_with_small_dataset(self):
+        """Test Cox PH with a small dataset."""
+        # Create tiny survival dataset
+        np.random.seed(42)
+        X = pd.DataFrame(
+            np.random.randn(30, 10),
+            columns=[f"GENE_{i}" for i in range(10)]
+        )
+        y_survival = pd.DataFrame({
+            'time': np.random.exponential(scale=10, size=30) + 1,
+            'event': np.random.binomial(1, 0.7, 30)
+        })
+
+        selected_features, metrics = run_coxph_feature_selection(
+            X, y_survival, n_features=5
+        )
+
+        # Should still work
+        assert isinstance(selected_features, list)
+        assert isinstance(metrics, dict)
+
+    def test_coxph_performance_on_informative_dataset(self):
+        """Test that Cox PH achieves reasonable performance."""
+        # Create dataset with clear signal for survival
+        np.random.seed(42)
+        X, _ = make_classification(
+            n_samples=150,
+            n_features=30,
+            n_informative=15,
+            n_redundant=5,
+            n_classes=2,
+            random_state=42,
+            class_sep=2.0
+        )
+
+        X_df = pd.DataFrame(X, columns=[f"GENE_{i}" for i in range(X.shape[1])])
+
+        # Create survival times correlated with some features
+        risk_score = X[:, 0] + X[:, 1] * 0.5  # Use first two features
+        times = np.exp(-risk_score + np.random.normal(0, 0.5, 150)) * 10
+        times = np.clip(times, 1, 100)  # Clip to reasonable range
+        events = np.random.binomial(1, 0.75, 150)
+
+        y_survival = pd.DataFrame({
+            'time': times,
+            'event': events
+        })
+
+        selected_features, metrics = run_coxph_feature_selection(
+            X_df, y_survival, n_features=20
+        )
+
+        # Should select features
+        assert len(selected_features) > 0
+
+        # Should achieve reasonable C-index (>0.5, better than random)
+        if len(selected_features) > 0:
+            assert metrics["c_index_mean"] > 0.5
