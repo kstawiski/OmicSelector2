@@ -20,7 +20,8 @@ except ImportError:
 try:
     import pandas as pd
     import numpy as np
-    from sklearn.linear_model import LassoCV
+    from sklearn.linear_model import LassoCV, ElasticNetCV
+    from sklearn.ensemble import RandomForestClassifier
     from sklearn.preprocessing import StandardScaler
     SKLEARN_AVAILABLE = True
 except ImportError:
@@ -81,6 +82,139 @@ def run_lasso_feature_selection(X: "pd.DataFrame", y: "pd.Series", cv: int = 5, 
     else:
         metrics = {
             "method": "lasso",
+            "n_features_selected": 0,
+            "error": "No features selected",
+        }
+
+    return selected_features, metrics
+
+
+def run_randomforest_feature_selection(
+    X: "pd.DataFrame", y: "pd.Series", cv: int = 5, n_features: int = 100
+) -> tuple[list[str], dict]:
+    """Run Random Forest feature selection with variable importance.
+
+    Args:
+        X: Feature matrix (samples x features)
+        y: Target variable
+        cv: Number of cross-validation folds
+        n_features: Maximum number of features to select
+
+    Returns:
+        Tuple of (selected_feature_names, metrics_dict)
+    """
+    if not SKLEARN_AVAILABLE:
+        raise ImportError("scikit-learn is required for feature selection")
+
+    # Train Random Forest to get feature importances
+    rf = RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
+    rf.fit(X, y)
+
+    # Get feature importances
+    importances = rf.feature_importances_
+
+    # Select top n features by importance
+    top_indices = np.argsort(importances)[::-1][:n_features]
+    selected_features = [X.columns[i] for i in top_indices]
+
+    # Calculate metrics
+    from sklearn.model_selection import cross_val_score
+    from sklearn.linear_model import LogisticRegression
+
+    # Train a simple logistic regression on selected features for evaluation
+    if len(selected_features) > 0:
+        X_selected = X[selected_features]
+        lr = LogisticRegression(random_state=42, max_iter=1000)
+        cv_scores = cross_val_score(lr, X_selected, y, cv=cv, scoring='roc_auc')
+
+        # Store feature importances for top features
+        feature_importance_dict = {
+            X.columns[i]: float(importances[i]) for i in top_indices
+        }
+
+        metrics = {
+            "method": "random_forest",
+            "n_features_selected": len(selected_features),
+            "cv_auc_mean": float(cv_scores.mean()),
+            "cv_auc_std": float(cv_scores.std()),
+            "cv_folds": cv,
+            "feature_importances": feature_importance_dict,
+        }
+    else:
+        metrics = {
+            "method": "random_forest",
+            "n_features_selected": 0,
+            "error": "No features selected",
+        }
+
+    return selected_features, metrics
+
+
+def run_elasticnet_feature_selection(
+    X: "pd.DataFrame", y: "pd.Series", cv: int = 5, n_features: int = 100
+) -> tuple[list[str], dict]:
+    """Run Elastic Net feature selection with cross-validation.
+
+    Elastic Net combines L1 (Lasso) and L2 (Ridge) regularization,
+    which is particularly useful for handling correlated features.
+
+    Args:
+        X: Feature matrix (samples x features)
+        y: Target variable
+        cv: Number of cross-validation folds
+        n_features: Maximum number of features to select
+
+    Returns:
+        Tuple of (selected_feature_names, metrics_dict)
+    """
+    if not SKLEARN_AVAILABLE:
+        raise ImportError("scikit-learn is required for feature selection")
+
+    # Standardize features
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    # Run ElasticNetCV to find optimal alpha and l1_ratio
+    elasticnet_cv = ElasticNetCV(
+        l1_ratio=[0.1, 0.3, 0.5, 0.7, 0.9, 0.95, 0.99],  # Test different L1/L2 ratios
+        cv=cv,
+        random_state=42,
+        max_iter=10000,
+        n_jobs=-1
+    )
+    elasticnet_cv.fit(X_scaled, y)
+
+    # Get feature coefficients
+    coef = np.abs(elasticnet_cv.coef_)
+
+    # Select top n features by absolute coefficient
+    top_indices = np.argsort(coef)[::-1][:n_features]
+    top_indices = top_indices[coef[top_indices] > 0]  # Only non-zero coefficients
+
+    selected_features = [X.columns[i] for i in top_indices]
+
+    # Calculate metrics
+    from sklearn.model_selection import cross_val_score
+    from sklearn.linear_model import LogisticRegression
+
+    # Train a simple logistic regression on selected features for evaluation
+    if len(selected_features) > 0:
+        X_selected = X[selected_features]
+        lr = LogisticRegression(random_state=42, max_iter=1000)
+        cv_scores = cross_val_score(lr, X_selected, y, cv=cv, scoring='roc_auc')
+
+        metrics = {
+            "method": "elastic_net",
+            "n_features_selected": len(selected_features),
+            "optimal_alpha": float(elasticnet_cv.alpha_),
+            "optimal_l1_ratio": float(elasticnet_cv.l1_ratio_),
+            "cv_auc_mean": float(cv_scores.mean()),
+            "cv_auc_std": float(cv_scores.std()),
+            "cv_folds": cv,
+        }
+    else:
+        metrics = {
+            "method": "elastic_net",
             "n_features_selected": 0,
             "error": "No features selected",
         }
@@ -169,13 +303,28 @@ if CELERY_AVAILABLE and celery_app:
                 # Update task state
                 self.update_state(state='PROGRESS', meta={'status': 'Running feature selection'})
 
-                # Run feature selection (currently only Lasso is implemented)
-                if 'lasso' in methods:
-                    selected_features, metrics = run_lasso_feature_selection(
-                        X, y, cv=cv_folds, n_features=n_features
+                # Map method names to functions
+                method_functions = {
+                    'lasso': run_lasso_feature_selection,
+                    'elastic_net': run_elasticnet_feature_selection,
+                    'random_forest': run_randomforest_feature_selection,
+                }
+
+                # Run feature selection with first specified method
+                # TODO: Support running multiple methods and aggregating results
+                method_name = methods[0] if isinstance(methods, list) else methods
+
+                if method_name not in method_functions:
+                    available_methods = ', '.join(method_functions.keys())
+                    raise ValueError(
+                        f"Method '{method_name}' not implemented. "
+                        f"Available methods: {available_methods}"
                     )
-                else:
-                    raise NotImplementedError(f"Methods {methods} not yet implemented")
+
+                method_func = method_functions[method_name]
+                selected_features, metrics = method_func(
+                    X, y, cv=cv_folds, n_features=n_features
+                )
 
                 logger.info(f"Selected {len(selected_features)} features")
 
@@ -237,4 +386,9 @@ else:
         raise ImportError("Celery is required for background tasks")
 
 
-__all__ = ["feature_selection_task", "run_lasso_feature_selection"]
+__all__ = [
+    "feature_selection_task",
+    "run_lasso_feature_selection",
+    "run_randomforest_feature_selection",
+    "run_elasticnet_feature_selection",
+]
