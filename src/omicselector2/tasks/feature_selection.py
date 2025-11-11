@@ -20,7 +20,8 @@ except ImportError:
 try:
     import pandas as pd
     import numpy as np
-    from sklearn.linear_model import LassoCV, ElasticNetCV
+    from sklearn.linear_model import LassoCV, ElasticNetCV, RidgeCV, LogisticRegression
+    from sklearn.svm import LinearSVC
     from sklearn.ensemble import RandomForestClassifier
     from sklearn.preprocessing import StandardScaler
     from sklearn.feature_selection import VarianceThreshold as SKVarianceThreshold
@@ -35,6 +36,14 @@ try:
 except ImportError:
     XGBOOST_AVAILABLE = False
     logger.warning("xgboost not available - XGBoost feature selection will not work")
+
+try:
+    from lifelines import CoxPHFitter
+    from lifelines.utils import concordance_index
+    LIFELINES_AVAILABLE = True
+except ImportError:
+    LIFELINES_AVAILABLE = False
+    logger.warning("lifelines not available - Cox PH feature selection will not work")
 
 
 def run_lasso_feature_selection(X: "pd.DataFrame", y: "pd.Series", cv: int = 5, n_features: int = 100) -> tuple[list[str], dict]:
@@ -455,6 +464,238 @@ def run_ttest_feature_selection(
     return selected_features, metrics
 
 
+def run_l1svm_feature_selection(
+    X: "pd.DataFrame", y: "pd.Series", cv: int = 5, n_features: int = 100
+) -> tuple[list[str], dict]:
+    """Run L1-SVM feature selection.
+
+    Uses Linear SVM with L1 penalty for embedded feature selection.
+    L1 regularization drives feature weights to zero, effectively selecting features.
+
+    Args:
+        X: Feature matrix (samples x features)
+        y: Target variable
+        cv: Number of cross-validation folds
+        n_features: Maximum number of features to select
+
+    Returns:
+        Tuple of (selected_feature_names, metrics_dict)
+    """
+    if not SKLEARN_AVAILABLE:
+        raise ImportError("scikit-learn is required for feature selection")
+
+    # Standardize features
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    # Find optimal C parameter using cross-validation
+    from sklearn.model_selection import GridSearchCV
+
+    # Try different C values
+    C_range = [0.001, 0.01, 0.1, 1.0, 10.0]
+    svm = LinearSVC(penalty='l1', dual=False, random_state=42, max_iter=5000)
+
+    grid_search = GridSearchCV(
+        svm,
+        param_grid={'C': C_range},
+        cv=cv,
+        scoring='roc_auc',
+        n_jobs=-1
+    )
+    grid_search.fit(X_scaled, y)
+
+    # Get feature coefficients from best model
+    best_svm = grid_search.best_estimator_
+    coef = np.abs(best_svm.coef_[0])
+
+    # Select top n features by absolute coefficient
+    top_indices = np.argsort(coef)[::-1][:n_features]
+    top_indices = top_indices[coef[top_indices] > 0]  # Only non-zero coefficients
+
+    selected_features = [X.columns[i] for i in top_indices]
+
+    # Calculate metrics
+    from sklearn.model_selection import cross_val_score
+
+    # Train a simple logistic regression on selected features for evaluation
+    if len(selected_features) > 0:
+        X_selected = X[selected_features]
+        lr = LogisticRegression(random_state=42, max_iter=1000)
+        cv_scores = cross_val_score(lr, X_selected, y, cv=cv, scoring='roc_auc')
+
+        metrics = {
+            "method": "l1_svm",
+            "n_features_selected": len(selected_features),
+            "optimal_C": float(grid_search.best_params_['C']),
+            "cv_auc_mean": float(cv_scores.mean()),
+            "cv_auc_std": float(cv_scores.std()),
+            "cv_folds": cv,
+        }
+    else:
+        metrics = {
+            "method": "l1_svm",
+            "n_features_selected": 0,
+            "error": "No features selected",
+        }
+
+    return selected_features, metrics
+
+
+def run_ridge_feature_selection(
+    X: "pd.DataFrame", y: "pd.Series", cv: int = 5, n_features: int = 100
+) -> tuple[list[str], dict]:
+    """Run Ridge Regression feature selection.
+
+    Ridge uses L2 regularization which shrinks coefficients but doesn't zero them out.
+    Features are ranked by absolute coefficient magnitude.
+
+    Args:
+        X: Feature matrix (samples x features)
+        y: Target variable
+        cv: Number of cross-validation folds
+        n_features: Maximum number of features to select
+
+    Returns:
+        Tuple of (selected_feature_names, metrics_dict)
+    """
+    if not SKLEARN_AVAILABLE:
+        raise ImportError("scikit-learn is required for feature selection")
+
+    # Standardize features
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    # Run RidgeCV to find optimal alpha
+    from sklearn.linear_model import RidgeClassifierCV
+
+    ridge_cv = RidgeClassifierCV(alphas=[0.001, 0.01, 0.1, 1.0, 10.0, 100.0], cv=cv)
+    ridge_cv.fit(X_scaled, y)
+
+    # Get feature coefficients
+    coef = np.abs(ridge_cv.coef_[0])
+
+    # Select top n features by absolute coefficient
+    top_indices = np.argsort(coef)[::-1][:n_features]
+    selected_features = [X.columns[i] for i in top_indices]
+
+    # Calculate metrics
+    from sklearn.model_selection import cross_val_score
+
+    # Train a simple logistic regression on selected features for evaluation
+    if len(selected_features) > 0:
+        X_selected = X[selected_features]
+        lr = LogisticRegression(random_state=42, max_iter=1000)
+        cv_scores = cross_val_score(lr, X_selected, y, cv=cv, scoring='roc_auc')
+
+        metrics = {
+            "method": "ridge",
+            "n_features_selected": len(selected_features),
+            "optimal_alpha": float(ridge_cv.alpha_),
+            "cv_auc_mean": float(cv_scores.mean()),
+            "cv_auc_std": float(cv_scores.std()),
+            "cv_folds": cv,
+        }
+    else:
+        metrics = {
+            "method": "ridge",
+            "n_features_selected": 0,
+            "error": "No features selected",
+        }
+
+    return selected_features, metrics
+
+
+def run_coxph_feature_selection(
+    X: "pd.DataFrame", y: "pd.DataFrame", n_features: int = 100
+) -> tuple[list[str], dict]:
+    """Run Cox Proportional Hazards feature selection.
+
+    Uses univariate Cox PH models for each feature to identify genes
+    associated with survival. Essential for cancer survival analysis.
+
+    Args:
+        X: Feature matrix (samples x features)
+        y: Survival data DataFrame with 'time' and 'event' columns
+        n_features: Maximum number of features to select
+
+    Returns:
+        Tuple of (selected_feature_names, metrics_dict)
+    """
+    if not LIFELINES_AVAILABLE:
+        raise ImportError("lifelines is required for Cox PH feature selection")
+
+    if not isinstance(y, pd.DataFrame):
+        raise ValueError("y must be a DataFrame with 'time' and 'event' columns for Cox PH")
+
+    if 'time' not in y.columns or 'event' not in y.columns:
+        raise ValueError("y must have 'time' and 'event' columns for survival analysis")
+
+    # Calculate univariate Cox PH hazard ratios and p-values for each feature
+    hazard_ratios = []
+    p_values = []
+    c_indices = []
+
+    for col in X.columns:
+        try:
+            # Create dataframe with single feature + survival data
+            df_temp = pd.DataFrame({
+                'feature': X[col],
+                'time': y['time'],
+                'event': y['event']
+            })
+
+            # Fit univariate Cox model
+            cph = CoxPHFitter()
+            cph.fit(df_temp, duration_col='time', event_col='event')
+
+            # Get hazard ratio and p-value
+            hr = cph.hazard_ratios_['feature']
+            p_val = cph.summary['p']['feature']
+
+            # Calculate concordance index
+            c_index = concordance_index(y['time'], -cph.predict_partial_hazard(df_temp[['feature']]).values.flatten(), y['event'])
+
+            hazard_ratios.append(abs(np.log(hr)))  # Use log hazard ratio magnitude
+            p_values.append(p_val)
+            c_indices.append(c_index)
+
+        except Exception as e:
+            # If fitting fails for a feature, assign worst values
+            logger.warning(f"Cox PH failed for feature {col}: {str(e)}")
+            hazard_ratios.append(0.0)
+            p_values.append(1.0)
+            c_indices.append(0.5)
+
+    # Select top n features by log hazard ratio magnitude (most associated with survival)
+    sorted_indices = np.argsort(hazard_ratios)[::-1][:n_features]
+    selected_features = [X.columns[i] for i in sorted_indices]
+
+    # Create hazard ratio dictionary for selected features
+    hr_dict = {
+        X.columns[i]: float(hazard_ratios[i]) for i in sorted_indices
+    }
+
+    # Calculate average C-index for selected features
+    if len(selected_features) > 0:
+        selected_c_indices = [c_indices[i] for i in sorted_indices]
+
+        metrics = {
+            "method": "cox_ph",
+            "n_features_selected": len(selected_features),
+            "c_index_mean": float(np.mean(selected_c_indices)),
+            "c_index_std": float(np.std(selected_c_indices)),
+            "hazard_ratios": hr_dict,
+        }
+    else:
+        metrics = {
+            "method": "cox_ph",
+            "n_features_selected": 0,
+            "error": "No features selected",
+        }
+
+    return selected_features, metrics
+
+
 if CELERY_AVAILABLE and celery_app:
 
     @celery_app.task(name="omicselector2.feature_selection", bind=True)
@@ -544,6 +785,9 @@ if CELERY_AVAILABLE and celery_app:
                     'xgboost': run_xgboost_feature_selection,
                     'variance_threshold': run_variance_threshold_feature_selection,
                     'ttest': run_ttest_feature_selection,
+                    'l1_svm': run_l1svm_feature_selection,
+                    'ridge': run_ridge_feature_selection,
+                    'cox_ph': run_coxph_feature_selection,
                 }
 
                 # Run feature selection with first specified method
@@ -630,4 +874,7 @@ __all__ = [
     "run_xgboost_feature_selection",
     "run_variance_threshold_feature_selection",
     "run_ttest_feature_selection",
+    "run_l1svm_feature_selection",
+    "run_ridge_feature_selection",
+    "run_coxph_feature_selection",
 ]
