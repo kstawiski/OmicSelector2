@@ -21,6 +21,9 @@ from omicselector2.tasks.feature_selection import (
     run_lasso_feature_selection,
     run_randomforest_feature_selection,
     run_elasticnet_feature_selection,
+    run_xgboost_feature_selection,
+    run_variance_threshold_feature_selection,
+    run_ttest_feature_selection,
 )
 
 
@@ -427,6 +430,283 @@ class TestElasticNetFeatureSelection:
         y_series = pd.Series(y)
 
         selected_features, metrics = run_elasticnet_feature_selection(
+            X_df, y_series, cv=5, n_features=20
+        )
+
+        # Should select features
+        assert len(selected_features) > 0
+
+        # Should achieve reasonable AUC (>0.6) on this dataset
+        if len(selected_features) > 0:
+            assert metrics["cv_auc_mean"] > 0.6
+
+
+class TestXGBoostFeatureSelection:
+    """Test XGBoost feature selection algorithm."""
+
+    def test_xgboost_selects_features(self, synthetic_dataset):
+        """Test that XGBoost selects a subset of features."""
+        X, y = synthetic_dataset
+
+        selected_features, metrics = run_xgboost_feature_selection(
+            X, y, cv=3, n_features=20
+        )
+
+        # Should select some features
+        assert len(selected_features) > 0
+        assert len(selected_features) <= 20
+
+        # All selected features should be from the original feature set
+        assert all(f in X.columns for f in selected_features)
+
+    def test_xgboost_metrics_structure(self, synthetic_dataset):
+        """Test that metrics have expected structure."""
+        X, y = synthetic_dataset
+
+        selected_features, metrics = run_xgboost_feature_selection(
+            X, y, cv=3, n_features=20
+        )
+
+        # Check metrics structure
+        assert "method" in metrics
+        assert metrics["method"] == "xgboost"
+        assert "n_features_selected" in metrics
+        assert metrics["n_features_selected"] == len(selected_features)
+
+        if len(selected_features) > 0:
+            assert "cv_auc_mean" in metrics
+            assert "cv_auc_std" in metrics
+            assert "cv_folds" in metrics
+            assert "feature_importances" in metrics
+
+            # AUC should be between 0 and 1
+            assert 0 <= metrics["cv_auc_mean"] <= 1
+            assert metrics["cv_auc_std"] >= 0
+
+    def test_xgboost_respects_n_features_limit(self, synthetic_dataset):
+        """Test that XGBoost respects the n_features limit."""
+        X, y = synthetic_dataset
+
+        # Request only 5 features
+        selected_features, metrics = run_xgboost_feature_selection(
+            X, y, cv=3, n_features=5
+        )
+
+        # Should not select more than requested
+        assert len(selected_features) <= 5
+
+    def test_xgboost_reproducibility(self, synthetic_dataset):
+        """Test that XGBoost produces reproducible results."""
+        X, y = synthetic_dataset
+
+        # Run twice with same parameters
+        selected_1, metrics_1 = run_xgboost_feature_selection(
+            X, y, cv=3, n_features=10
+        )
+
+        selected_2, metrics_2 = run_xgboost_feature_selection(
+            X, y, cv=3, n_features=10
+        )
+
+        # Should get same features (due to random_state=42)
+        assert selected_1 == selected_2
+
+    def test_xgboost_performance_on_informative_dataset(self):
+        """Test that XGBoost achieves reasonable performance."""
+        # Create dataset with clear signal
+        X, y = make_classification(
+            n_samples=200,
+            n_features=30,
+            n_informative=15,
+            n_redundant=5,
+            n_classes=2,
+            random_state=42,
+            class_sep=2.0
+        )
+
+        X_df = pd.DataFrame(X, columns=[f"GENE_{i}" for i in range(X.shape[1])])
+        y_series = pd.Series(y)
+
+        selected_features, metrics = run_xgboost_feature_selection(
+            X_df, y_series, cv=5, n_features=20
+        )
+
+        # Should select features
+        assert len(selected_features) > 0
+
+        # Should achieve reasonable AUC (>0.6) on this dataset
+        if len(selected_features) > 0:
+            assert metrics["cv_auc_mean"] > 0.6
+
+
+class TestVarianceThresholdFeatureSelection:
+    """Test Variance Threshold feature selection algorithm."""
+
+    def test_variance_selects_features(self, synthetic_dataset):
+        """Test that Variance Threshold selects a subset of features."""
+        X, y = synthetic_dataset
+
+        selected_features, metrics = run_variance_threshold_feature_selection(
+            X, y, cv=3, n_features=20
+        )
+
+        # Should select some features
+        assert len(selected_features) > 0
+        assert len(selected_features) <= 20
+
+        # All selected features should be from the original feature set
+        assert all(f in X.columns for f in selected_features)
+
+    def test_variance_metrics_structure(self, synthetic_dataset):
+        """Test that metrics have expected structure."""
+        X, y = synthetic_dataset
+
+        selected_features, metrics = run_variance_threshold_feature_selection(
+            X, y, cv=3, n_features=20
+        )
+
+        # Check metrics structure
+        assert "method" in metrics
+        assert metrics["method"] == "variance_threshold"
+        assert "n_features_selected" in metrics
+        assert metrics["n_features_selected"] == len(selected_features)
+
+        if len(selected_features) > 0:
+            assert "cv_auc_mean" in metrics
+            assert "cv_auc_std" in metrics
+            assert "cv_folds" in metrics
+            assert "variance_threshold" in metrics
+
+            # AUC should be between 0 and 1
+            assert 0 <= metrics["cv_auc_mean"] <= 1
+            assert metrics["cv_auc_std"] >= 0
+
+    def test_variance_respects_n_features_limit(self, synthetic_dataset):
+        """Test that Variance Threshold respects the n_features limit."""
+        X, y = synthetic_dataset
+
+        # Request only 5 features
+        selected_features, metrics = run_variance_threshold_feature_selection(
+            X, y, cv=3, n_features=5
+        )
+
+        # Should not select more than requested
+        assert len(selected_features) <= 5
+
+    def test_variance_filters_low_variance_features(self):
+        """Test that Variance Threshold filters out low-variance features."""
+        # Create dataset with some constant features
+        np.random.seed(42)
+        X = pd.DataFrame({
+            'GENE_0': np.random.randn(100),  # High variance
+            'GENE_1': np.ones(100),  # Zero variance (constant)
+            'GENE_2': np.random.randn(100) * 0.01,  # Very low variance
+            'GENE_3': np.random.randn(100),  # High variance
+            'GENE_4': np.array([0, 1] * 50),  # Binary, low variance
+        })
+        y = pd.Series(np.random.randint(0, 2, 100))
+
+        selected_features, metrics = run_variance_threshold_feature_selection(
+            X, y, cv=3, n_features=10
+        )
+
+        # Should select features (excluding constant one)
+        assert len(selected_features) > 0
+        # Constant feature should not be selected
+        assert 'GENE_1' not in selected_features
+
+
+class TestTTestFeatureSelection:
+    """Test t-test feature selection algorithm."""
+
+    def test_ttest_selects_features(self, synthetic_dataset):
+        """Test that t-test selects a subset of features."""
+        X, y = synthetic_dataset
+
+        selected_features, metrics = run_ttest_feature_selection(
+            X, y, cv=3, n_features=20
+        )
+
+        # Should select some features
+        assert len(selected_features) > 0
+        assert len(selected_features) <= 20
+
+        # All selected features should be from the original feature set
+        assert all(f in X.columns for f in selected_features)
+
+    def test_ttest_metrics_structure(self, synthetic_dataset):
+        """Test that metrics have expected structure."""
+        X, y = synthetic_dataset
+
+        selected_features, metrics = run_ttest_feature_selection(
+            X, y, cv=3, n_features=20
+        )
+
+        # Check metrics structure
+        assert "method" in metrics
+        assert metrics["method"] == "ttest"
+        assert "n_features_selected" in metrics
+        assert metrics["n_features_selected"] == len(selected_features)
+
+        if len(selected_features) > 0:
+            assert "cv_auc_mean" in metrics
+            assert "cv_auc_std" in metrics
+            assert "cv_folds" in metrics
+            assert "p_values" in metrics
+
+            # AUC should be between 0 and 1
+            assert 0 <= metrics["cv_auc_mean"] <= 1
+            assert metrics["cv_auc_std"] >= 0
+
+            # P-values should be between 0 and 1
+            for p_val in metrics["p_values"].values():
+                assert 0 <= p_val <= 1
+
+    def test_ttest_respects_n_features_limit(self, synthetic_dataset):
+        """Test that t-test respects the n_features limit."""
+        X, y = synthetic_dataset
+
+        # Request only 5 features
+        selected_features, metrics = run_ttest_feature_selection(
+            X, y, cv=3, n_features=5
+        )
+
+        # Should not select more than requested
+        assert len(selected_features) <= 5
+
+    def test_ttest_reproducibility(self, synthetic_dataset):
+        """Test that t-test produces reproducible results."""
+        X, y = synthetic_dataset
+
+        # Run twice with same parameters
+        selected_1, metrics_1 = run_ttest_feature_selection(
+            X, y, cv=3, n_features=10
+        )
+
+        selected_2, metrics_2 = run_ttest_feature_selection(
+            X, y, cv=3, n_features=10
+        )
+
+        # Should get same features (t-test is deterministic)
+        assert selected_1 == selected_2
+
+    def test_ttest_performance_on_informative_dataset(self):
+        """Test that t-test achieves reasonable performance."""
+        # Create dataset with clear signal
+        X, y = make_classification(
+            n_samples=200,
+            n_features=30,
+            n_informative=15,
+            n_redundant=5,
+            n_classes=2,
+            random_state=42,
+            class_sep=2.0
+        )
+
+        X_df = pd.DataFrame(X, columns=[f"GENE_{i}" for i in range(X.shape[1])])
+        y_series = pd.Series(y)
+
+        selected_features, metrics = run_ttest_feature_selection(
             X_df, y_series, cv=5, n_features=20
         )
 
