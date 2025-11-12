@@ -29,6 +29,7 @@ from omicselector2.tasks.feature_selection import (
     run_coxph_feature_selection,
     run_mrmr_feature_selection,
     run_boruta_feature_selection,
+    run_relieff_feature_selection,
 )
 
 
@@ -1165,3 +1166,79 @@ class TestBorutaFeatureSelection:
 
         # Should get same features (due to random_state=42)
         assert selected_1 == selected_2
+
+
+class TestReliefFFeatureSelection:
+    """Tests for ReliefF feature selection."""
+
+    def test_relieff_selects_features(self, synthetic_dataset):
+        """Test that ReliefF selects features."""
+        X, y = synthetic_dataset
+
+        selected_features, metrics = run_relieff_feature_selection(
+            X, y, cv=3, n_features=20
+        )
+
+        # Should select some features
+        assert len(selected_features) > 0
+        assert isinstance(selected_features, list)
+        assert all(isinstance(f, str) for f in selected_features)
+
+    def test_relieff_metrics_structure(self, synthetic_dataset):
+        """Test that metrics have expected structure."""
+        X, y = synthetic_dataset
+
+        selected_features, metrics = run_relieff_feature_selection(
+            X, y, cv=3, n_features=20
+        )
+
+        assert "method" in metrics
+        assert metrics["method"] == "relieff"
+        assert "n_features_selected" in metrics
+        assert "cv_auc_mean" in metrics
+        assert "cv_auc_std" in metrics
+        assert "cv_folds" in metrics
+        assert "relief_scores" in metrics
+
+        # AUC should be between 0 and 1
+        if "cv_auc_mean" in metrics and metrics["cv_auc_mean"] is not None:
+            assert 0 <= metrics["cv_auc_mean"] <= 1
+
+    def test_relieff_respects_n_features_limit(self, synthetic_dataset):
+        """Test that ReliefF respects n_features limit."""
+        X, y = synthetic_dataset
+
+        # Request only 5 features
+        selected_features, metrics = run_relieff_feature_selection(
+            X, y, cv=3, n_features=5
+        )
+
+        # Should not select more than requested
+        assert len(selected_features) <= 5
+
+    def test_relieff_performance_on_informative_dataset(self):
+        """Test that ReliefF achieves reasonable performance on informative data."""
+        # Create dataset with clear signal
+        X, y = make_classification(
+            n_samples=200,
+            n_features=30,
+            n_informative=15,
+            n_redundant=5,
+            n_classes=2,
+            random_state=42,
+            class_sep=2.0
+        )
+
+        X_df = pd.DataFrame(X, columns=[f"GENE_{i}" for i in range(X.shape[1])])
+        y_series = pd.Series(y)
+
+        selected_features, metrics = run_relieff_feature_selection(
+            X_df, y_series, cv=5, n_features=20
+        )
+
+        # Should select features
+        assert len(selected_features) > 0
+
+        # Should achieve reasonable AUC (>0.6) on this dataset
+        if len(selected_features) > 0:
+            assert metrics["cv_auc_mean"] > 0.6
