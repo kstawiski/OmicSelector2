@@ -885,6 +885,144 @@ def run_boruta_feature_selection(
     return selected_features, metrics
 
 
+def run_relieff_feature_selection(
+    X: "pd.DataFrame", y: "pd.Series", cv: int = 5, n_features: int = 100
+) -> tuple[list[str], dict]:
+    """Run ReliefF feature selection.
+
+    ReliefF is an instance-based feature selection algorithm that evaluates
+    features based on their ability to distinguish between near hits (same class
+    neighbors) and near misses (different class neighbors).
+
+    Algorithm:
+    1. For m iterations:
+       - Randomly sample an instance
+       - Find k nearest neighbors from same class (near hits)
+       - Find k nearest neighbors from different classes (near misses)
+       - Update feature weights:
+         * Decrease if feature differs from near hits
+         * Increase if feature differs from near misses
+    2. Select top features by final weights
+
+    Args:
+        X: Feature matrix (samples x features) as DataFrame
+        y: Target variable (samples,) as Series
+        cv: Number of cross-validation folds for evaluation
+        n_features: Number of features to select
+
+    Returns:
+        Tuple of (selected_features, metrics)
+        - selected_features: List of selected feature names
+        - metrics: Dictionary containing method metadata and performance
+
+    Raises:
+        ImportError: If scikit-learn is not installed
+    """
+    if not SKLEARN_AVAILABLE:
+        raise ImportError("scikit-learn is required for feature selection")
+
+    from sklearn.neighbors import NearestNeighbors
+    from sklearn.model_selection import cross_val_score
+
+    # Standardize features for distance calculation
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    # ReliefF parameters
+    n_iterations = min(100, len(X))  # Number of random samples
+    k_neighbors = min(10, len(X) // 10)  # Number of neighbors
+
+    # Initialize feature weights
+    weights = np.zeros(X.shape[1])
+
+    # Get unique classes
+    classes = np.unique(y)
+    n_classes = len(classes)
+
+    np.random.seed(42)
+
+    for iteration in range(n_iterations):
+        # Randomly sample an instance
+        idx = np.random.randint(0, len(X))
+        instance = X_scaled[idx]
+        instance_class = y.iloc[idx]
+
+        # Find k nearest neighbors from same class (near hits)
+        same_class_mask = y == instance_class
+        if same_class_mask.sum() > 1:  # Need at least one other instance
+            X_same = X_scaled[same_class_mask]
+            nn_same = NearestNeighbors(n_neighbors=min(k_neighbors + 1, X_same.shape[0]))
+            nn_same.fit(X_same)
+            distances_same, indices_same = nn_same.kneighbors([instance])
+
+            # Exclude the instance itself (first neighbor)
+            indices_same = indices_same[0][1:]
+            same_class_indices = np.where(same_class_mask)[0][indices_same]
+            near_hits = X_scaled[same_class_indices]
+        else:
+            near_hits = np.array([])
+
+        # Find k nearest neighbors from different classes (near misses)
+        near_misses_by_class = []
+        for other_class in classes:
+            if other_class == instance_class:
+                continue
+
+            other_class_mask = y == other_class
+            if other_class_mask.sum() > 0:
+                X_other = X_scaled[other_class_mask]
+                nn_other = NearestNeighbors(n_neighbors=min(k_neighbors, X_other.shape[0]))
+                nn_other.fit(X_other)
+                distances_other, indices_other = nn_other.kneighbors([instance])
+
+                other_class_indices = np.where(other_class_mask)[0][indices_other[0]]
+                near_misses_by_class.append(X_scaled[other_class_indices])
+
+        # Update feature weights
+        if len(near_hits) > 0:
+            # Decrease weight for features that differ from near hits
+            diff_hits = np.abs(instance - near_hits)
+            weights -= diff_hits.mean(axis=0) / n_iterations
+
+        if near_misses_by_class:
+            # Increase weight for features that differ from near misses
+            for near_misses in near_misses_by_class:
+                diff_misses = np.abs(instance - near_misses)
+                weights += diff_misses.mean(axis=0) / (n_iterations * (n_classes - 1))
+
+    # Select top n features by weight
+    top_indices = np.argsort(weights)[::-1][:n_features]
+    selected_features = [X.columns[i] for i in top_indices]
+
+    # Create weights dictionary for selected features
+    relief_scores = {X.columns[i]: float(weights[i]) for i in top_indices}
+
+    # Evaluate with cross-validation
+    if len(selected_features) > 0:
+        X_selected = X[selected_features]
+        lr = LogisticRegression(random_state=42, max_iter=1000)
+        cv_scores = cross_val_score(lr, X_selected, y, cv=cv, scoring='roc_auc')
+
+        metrics = {
+            "method": "relieff",
+            "n_features_selected": len(selected_features),
+            "cv_auc_mean": float(cv_scores.mean()),
+            "cv_auc_std": float(cv_scores.std()),
+            "cv_folds": cv,
+            "relief_scores": relief_scores,
+            "n_iterations": n_iterations,
+            "k_neighbors": k_neighbors,
+        }
+    else:
+        metrics = {
+            "method": "relieff",
+            "n_features_selected": 0,
+            "error": "No features selected",
+        }
+
+    return selected_features, metrics
+
+
 if CELERY_AVAILABLE and celery_app:
 
     @celery_app.task(name="omicselector2.feature_selection", bind=True)
@@ -979,6 +1117,7 @@ if CELERY_AVAILABLE and celery_app:
                     'cox_ph': run_coxph_feature_selection,
                     'mrmr': run_mrmr_feature_selection,
                     'boruta': run_boruta_feature_selection,
+                    'relieff': run_relieff_feature_selection,
                 }
 
                 # Run feature selection with first specified method
@@ -1070,4 +1209,5 @@ __all__ = [
     "run_coxph_feature_selection",
     "run_mrmr_feature_selection",
     "run_boruta_feature_selection",
+    "run_relieff_feature_selection",
 ]
