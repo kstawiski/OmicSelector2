@@ -696,6 +696,195 @@ def run_coxph_feature_selection(
     return selected_features, metrics
 
 
+def run_mrmr_feature_selection(
+    X: "pd.DataFrame", y: "pd.Series", cv: int = 5, n_features: int = 100
+) -> tuple[list[str], dict]:
+    """Run mRMR (Minimum Redundancy Maximum Relevance) feature selection.
+
+    mRMR selects features that maximize relevance to target while minimizing
+    redundancy among selected features. Uses mutual information.
+
+    Args:
+        X: Feature matrix (samples x features)
+        y: Target variable
+        cv: Number of cross-validation folds
+        n_features: Maximum number of features to select
+
+    Returns:
+        Tuple of (selected_feature_names, metrics_dict)
+    """
+    if not SKLEARN_AVAILABLE:
+        raise ImportError("scikit-learn is required for feature selection")
+
+    from sklearn.feature_selection import mutual_info_classif, mutual_info_regression
+
+    # Calculate mutual information between each feature and target (relevance)
+    mi_scores = mutual_info_classif(X, y, random_state=42)
+
+    # mRMR greedy selection
+    selected_indices = []
+    remaining_indices = list(range(X.shape[1]))
+
+    # Select first feature with highest relevance
+    if len(remaining_indices) > 0:
+        first_idx = np.argmax(mi_scores)
+        selected_indices.append(first_idx)
+        remaining_indices.remove(first_idx)
+
+    # Iteratively select features that maximize relevance - redundancy
+    while len(selected_indices) < min(n_features, X.shape[1]) and remaining_indices:
+        mrmr_scores = []
+
+        for idx in remaining_indices:
+            # Relevance: MI with target
+            relevance = mi_scores[idx]
+
+            # Redundancy: average MI with already selected features
+            if len(selected_indices) > 0:
+                redundancy = 0
+                for selected_idx in selected_indices:
+                    # Compute MI between two features (treat one as continuous target)
+                    mi_between = mutual_info_regression(
+                        X.iloc[:, [idx]].values,
+                        X.iloc[:, selected_idx].values.ravel(),
+                        random_state=42
+                    )[0]
+                    redundancy += mi_between
+                redundancy /= len(selected_indices)
+            else:
+                redundancy = 0
+
+            # mRMR score = relevance - redundancy
+            mrmr_score = relevance - redundancy
+            mrmr_scores.append(mrmr_score)
+
+        # Select feature with highest mRMR score
+        best_idx_in_remaining = np.argmax(mrmr_scores)
+        best_idx = remaining_indices[best_idx_in_remaining]
+        selected_indices.append(best_idx)
+        remaining_indices.remove(best_idx)
+
+    selected_features = [X.columns[i] for i in selected_indices]
+
+    # Create MI scores dictionary for selected features
+    mi_dict = {X.columns[i]: float(mi_scores[i]) for i in selected_indices}
+
+    # Calculate metrics
+    from sklearn.model_selection import cross_val_score
+
+    # Train a simple logistic regression on selected features for evaluation
+    if len(selected_features) > 0:
+        X_selected = X[selected_features]
+        lr = LogisticRegression(random_state=42, max_iter=1000)
+        cv_scores = cross_val_score(lr, X_selected, y, cv=cv, scoring='roc_auc')
+
+        metrics = {
+            "method": "mrmr",
+            "n_features_selected": len(selected_features),
+            "cv_auc_mean": float(cv_scores.mean()),
+            "cv_auc_std": float(cv_scores.std()),
+            "cv_folds": cv,
+            "mutual_information_scores": mi_dict,
+        }
+    else:
+        metrics = {
+            "method": "mrmr",
+            "n_features_selected": 0,
+            "error": "No features selected",
+        }
+
+    return selected_features, metrics
+
+
+def run_boruta_feature_selection(
+    X: "pd.DataFrame", y: "pd.Series", cv: int = 5, n_features: int = 100
+) -> tuple[list[str], dict]:
+    """Run Boruta-like feature selection.
+
+    Boruta is a wrapper method around Random Forest that compares feature
+    importances against shadow features (randomized copies).
+
+    Args:
+        X: Feature matrix (samples x features)
+        y: Target variable
+        cv: Number of cross-validation folds
+        n_features: Maximum number of features to select
+
+    Returns:
+        Tuple of (selected_feature_names, metrics_dict)
+    """
+    if not SKLEARN_AVAILABLE:
+        raise ImportError("scikit-learn is required for feature selection")
+
+    # Create shadow features (randomized copies)
+    np.random.seed(42)
+    X_shadow = X.apply(lambda col: np.random.permutation(col.values), axis=0)
+    X_shadow.columns = [f"shadow_{col}" for col in X.columns]
+
+    # Combine original and shadow features
+    X_combined = pd.concat([X, X_shadow], axis=1)
+
+    # Train Random Forest on combined dataset
+    rf = RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
+    rf.fit(X_combined, y)
+
+    # Get feature importances
+    importances = rf.feature_importances_
+
+    # Split importances into original and shadow
+    n_features_original = X.shape[1]
+    original_importances = importances[:n_features_original]
+    shadow_importances = importances[n_features_original:]
+
+    # Statistical test: compare each feature to max shadow importance
+    max_shadow_importance = np.max(shadow_importances)
+
+    # Select features with importance greater than max shadow
+    significant_mask = original_importances > max_shadow_importance
+    significant_indices = np.where(significant_mask)[0]
+
+    # If we have more significant features than requested, select top n
+    if len(significant_indices) > n_features:
+        top_n_indices = np.argsort(original_importances[significant_indices])[::-1][:n_features]
+        selected_indices = significant_indices[top_n_indices]
+    else:
+        selected_indices = significant_indices
+
+    selected_features = [X.columns[i] for i in selected_indices]
+
+    # Create importance scores dictionary for selected features
+    importance_dict = {
+        X.columns[i]: float(original_importances[i]) for i in selected_indices
+    }
+
+    # Calculate metrics
+    from sklearn.model_selection import cross_val_score
+
+    # Train a simple logistic regression on selected features for evaluation
+    if len(selected_features) > 0:
+        X_selected = X[selected_features]
+        lr = LogisticRegression(random_state=42, max_iter=1000)
+        cv_scores = cross_val_score(lr, X_selected, y, cv=cv, scoring='roc_auc')
+
+        metrics = {
+            "method": "boruta",
+            "n_features_selected": len(selected_features),
+            "cv_auc_mean": float(cv_scores.mean()),
+            "cv_auc_std": float(cv_scores.std()),
+            "cv_folds": cv,
+            "importance_scores": importance_dict,
+            "max_shadow_importance": float(max_shadow_importance),
+        }
+    else:
+        metrics = {
+            "method": "boruta",
+            "n_features_selected": 0,
+            "error": "No features selected",
+        }
+
+    return selected_features, metrics
+
+
 if CELERY_AVAILABLE and celery_app:
 
     @celery_app.task(name="omicselector2.feature_selection", bind=True)
@@ -788,6 +977,8 @@ if CELERY_AVAILABLE and celery_app:
                     'l1_svm': run_l1svm_feature_selection,
                     'ridge': run_ridge_feature_selection,
                     'cox_ph': run_coxph_feature_selection,
+                    'mrmr': run_mrmr_feature_selection,
+                    'boruta': run_boruta_feature_selection,
                 }
 
                 # Run feature selection with first specified method
@@ -877,4 +1068,6 @@ __all__ = [
     "run_l1svm_feature_selection",
     "run_ridge_feature_selection",
     "run_coxph_feature_selection",
+    "run_mrmr_feature_selection",
+    "run_boruta_feature_selection",
 ]
