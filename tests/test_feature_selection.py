@@ -27,6 +27,8 @@ from omicselector2.tasks.feature_selection import (
     run_l1svm_feature_selection,
     run_ridge_feature_selection,
     run_coxph_feature_selection,
+    run_mrmr_feature_selection,
+    run_boruta_feature_selection,
 )
 
 
@@ -1010,3 +1012,156 @@ class TestCoxPHFeatureSelection:
         # Should achieve reasonable C-index (>0.5, better than random)
         if len(selected_features) > 0:
             assert metrics["c_index_mean"] > 0.5
+
+
+class TestMRMRFeatureSelection:
+    """Test mRMR (Minimum Redundancy Maximum Relevance) feature selection."""
+
+    def test_mrmr_selects_features(self, synthetic_dataset):
+        """Test that mRMR selects a subset of features."""
+        X, y = synthetic_dataset
+
+        selected_features, metrics = run_mrmr_feature_selection(
+            X, y, cv=3, n_features=20
+        )
+
+        # Should select some features
+        assert len(selected_features) > 0
+        assert len(selected_features) <= 20
+
+        # All selected features should be from the original feature set
+        assert all(f in X.columns for f in selected_features)
+
+    def test_mrmr_metrics_structure(self, synthetic_dataset):
+        """Test that metrics have expected structure."""
+        X, y = synthetic_dataset
+
+        selected_features, metrics = run_mrmr_feature_selection(
+            X, y, cv=3, n_features=20
+        )
+
+        # Check metrics structure
+        assert "method" in metrics
+        assert metrics["method"] == "mrmr"
+        assert "n_features_selected" in metrics
+        assert metrics["n_features_selected"] == len(selected_features)
+
+        if len(selected_features) > 0:
+            assert "cv_auc_mean" in metrics
+            assert "cv_auc_std" in metrics
+            assert "cv_folds" in metrics
+            assert "mutual_information_scores" in metrics
+
+            # AUC should be between 0 and 1
+            assert 0 <= metrics["cv_auc_mean"] <= 1
+            assert metrics["cv_auc_std"] >= 0
+
+    def test_mrmr_respects_n_features_limit(self, synthetic_dataset):
+        """Test that mRMR respects the n_features limit."""
+        X, y = synthetic_dataset
+
+        # Request only 5 features
+        selected_features, metrics = run_mrmr_feature_selection(
+            X, y, cv=3, n_features=5
+        )
+
+        # Should not select more than requested
+        assert len(selected_features) <= 5
+
+    def test_mrmr_performance_on_informative_dataset(self):
+        """Test that mRMR achieves reasonable performance."""
+        # Create dataset with clear signal
+        X, y = make_classification(
+            n_samples=200,
+            n_features=30,
+            n_informative=15,
+            n_redundant=5,
+            n_classes=2,
+            random_state=42,
+            class_sep=2.0
+        )
+
+        X_df = pd.DataFrame(X, columns=[f"GENE_{i}" for i in range(X.shape[1])])
+        y_series = pd.Series(y)
+
+        selected_features, metrics = run_mrmr_feature_selection(
+            X_df, y_series, cv=5, n_features=20
+        )
+
+        # Should select features
+        assert len(selected_features) > 0
+
+        # Should achieve reasonable AUC (>0.6) on this dataset
+        if len(selected_features) > 0:
+            assert metrics["cv_auc_mean"] > 0.6
+
+
+class TestBorutaFeatureSelection:
+    """Test Boruta-like feature selection algorithm."""
+
+    def test_boruta_selects_features(self, synthetic_dataset):
+        """Test that Boruta selects a subset of features."""
+        X, y = synthetic_dataset
+
+        selected_features, metrics = run_boruta_feature_selection(
+            X, y, cv=3, n_features=20
+        )
+
+        # Should select some features
+        assert len(selected_features) > 0
+        assert len(selected_features) <= 20
+
+        # All selected features should be from the original feature set
+        assert all(f in X.columns for f in selected_features)
+
+    def test_boruta_metrics_structure(self, synthetic_dataset):
+        """Test that metrics have expected structure."""
+        X, y = synthetic_dataset
+
+        selected_features, metrics = run_boruta_feature_selection(
+            X, y, cv=3, n_features=20
+        )
+
+        # Check metrics structure
+        assert "method" in metrics
+        assert metrics["method"] == "boruta"
+        assert "n_features_selected" in metrics
+        assert metrics["n_features_selected"] == len(selected_features)
+
+        if len(selected_features) > 0:
+            assert "cv_auc_mean" in metrics
+            assert "cv_auc_std" in metrics
+            assert "cv_folds" in metrics
+            assert "importance_scores" in metrics
+
+            # AUC should be between 0 and 1
+            assert 0 <= metrics["cv_auc_mean"] <= 1
+            assert metrics["cv_auc_std"] >= 0
+
+    def test_boruta_respects_n_features_limit(self, synthetic_dataset):
+        """Test that Boruta respects the n_features limit."""
+        X, y = synthetic_dataset
+
+        # Request only 5 features
+        selected_features, metrics = run_boruta_feature_selection(
+            X, y, cv=3, n_features=5
+        )
+
+        # Should not select more than requested
+        assert len(selected_features) <= 5
+
+    def test_boruta_reproducibility(self, synthetic_dataset):
+        """Test that Boruta produces reproducible results."""
+        X, y = synthetic_dataset
+
+        # Run twice with same parameters
+        selected_1, metrics_1 = run_boruta_feature_selection(
+            X, y, cv=3, n_features=10
+        )
+
+        selected_2, metrics_2 = run_boruta_feature_selection(
+            X, y, cv=3, n_features=10
+        )
+
+        # Should get same features (due to random_state=42)
+        assert selected_1 == selected_2
