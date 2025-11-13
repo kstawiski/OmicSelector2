@@ -65,7 +65,7 @@ app.add_middleware(
 )
 
 # Register API routers
-from omicselector2.api.routes import auth, data
+from omicselector2.api.routes import auth, data, jobs
 
 app.include_router(
     auth.router,
@@ -76,6 +76,11 @@ app.include_router(
     data.router,
     prefix="/api/v1/data",
     tags=["data"],
+)
+app.include_router(
+    jobs.router,
+    prefix="/api/v1/jobs",
+    tags=["jobs"],
 )
 
 
