@@ -125,22 +125,7 @@ class StabilitySelector(BaseFeatureSelector):
             base_selector, BaseFeatureSelector
         )
 
-        if self._is_function_selector:
-            # Function-based selector - don't call super().__init__
-            self.base_selector = base_selector
-            self.n_bootstraps = n_bootstraps
-            self.threshold = threshold
-            self.sample_fraction = sample_fraction
-            self.random_state = random_state
-            self.verbose = verbose
-
-            # Attributes set during fit/select
-            self.stability_scores_: dict[str, float] = {}
-            self.selection_counts_: dict[str, int] = {}
-            self.selected_features_: list[str] = []
-            self.support_mask_: Optional[np.ndarray] = None
-            self.feature_scores_: Optional[np.ndarray] = None
-        else:
+        if not self._is_function_selector:
             # Class-based selector - use normal initialization
             super().__init__(
                 n_features_to_select=None,  # Determined by stability threshold
@@ -148,14 +133,21 @@ class StabilitySelector(BaseFeatureSelector):
                 verbose=verbose,
             )
 
-            self.base_selector = base_selector
-            self.n_bootstraps = n_bootstraps
-            self.threshold = threshold
-            self.sample_fraction = sample_fraction
+        self.base_selector = base_selector
+        self.n_bootstraps = n_bootstraps
+        self.threshold = threshold
+        self.sample_fraction = sample_fraction
+        self.random_state = random_state
+        self.verbose = verbose
 
-            # Attributes set during fit
-            self.stability_scores_: dict[str, float] = {}
-            self.selection_counts_: dict[str, int] = {}
+        # Attributes set during fit/select
+        self.stability_scores_: dict[str, float] = {}
+        self.selection_counts_: dict[str, int] = {}
+
+        if self._is_function_selector:
+            self.selected_features_: list[str] = []
+            self.support_mask_: Optional[np.ndarray] = None
+            self.feature_scores_: Optional[np.ndarray] = None
 
     def fit(self, X: pd.DataFrame, y: pd.Series) -> "StabilitySelector":
         """Fit stability selector using bootstrap resampling.

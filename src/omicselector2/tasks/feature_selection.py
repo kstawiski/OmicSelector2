@@ -1091,15 +1091,66 @@ if CELERY_AVAILABLE and celery_app:
 
                 logger.info(f"Loaded data: {df.shape[0]} samples, {df.shape[1]} features")
 
-                # Extract features and target
-                # Assume last column is target, rest are features
-                X = df.iloc[:, :-1]
-                y = df.iloc[:, -1]
-
                 # Get configuration
                 methods = config.get('methods', ['lasso'])
                 n_features = config.get('n_features', 100)
                 cv_folds = config.get('cv_folds', 5)
+
+                # Determine target columns
+                target_columns: list[str] = []
+                target_config = config.get('target')
+                if isinstance(target_config, str):
+                    target_columns = [target_config]
+                elif isinstance(target_config, dict):
+                    if 'column' in target_config:
+                        target_columns = [target_config['column']]
+                    elif 'columns' in target_config and isinstance(
+                        target_config['columns'], (list, tuple)
+                    ):
+                        target_columns = list(target_config['columns'])
+                    elif {
+                        'time_column',
+                        'event_column',
+                    }.issubset(target_config.keys()):
+                        target_columns = [
+                            target_config['time_column'],
+                            target_config['event_column'],
+                        ]
+
+                if not target_columns:
+                    explicit_target_column = config.get('target_column')
+                    if isinstance(explicit_target_column, str):
+                        target_columns = [explicit_target_column]
+                    explicit_target_columns = config.get('target_columns')
+                    if isinstance(explicit_target_columns, (list, tuple)):
+                        target_columns = list(explicit_target_columns)
+
+                if not target_columns:
+                    # Fallback: assume last column is target, rest are features
+                    target_columns = [df.columns[-1]]
+
+                missing_columns = [col for col in target_columns if col not in df.columns]
+                if missing_columns:
+                    raise ValueError(
+                        f"Target column(s) {missing_columns} not found in dataset"
+                    )
+
+                # Ensure Cox PH receives both survival columns
+                if 'cox_ph' in methods and len(target_columns) < 2:
+                    raise ValueError(
+                        "Cox PH feature selection requires both time and event columns. "
+                        "Provide them using config['target'] or config['target_columns']."
+                    )
+
+                feature_columns = [col for col in df.columns if col not in target_columns]
+                if not feature_columns:
+                    raise ValueError("No feature columns available after removing target columns")
+
+                X = df[feature_columns]
+                if len(target_columns) == 1:
+                    y = df[target_columns[0]]
+                else:
+                    y = df[target_columns]
 
                 # Get stability and ensemble config
                 stability_config = config.get('stability', None)

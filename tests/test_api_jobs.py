@@ -326,8 +326,13 @@ class TestListJobs:
 
         mock_query = Mock()
         mock_query.filter.return_value = mock_query
-        mock_query.count.return_value = 3
-        mock_query.offset.return_value.limit.return_value.all.return_value = mock_jobs
+        mock_ordered = Mock()
+        mock_query.order_by.return_value = mock_ordered
+        mock_offset = Mock()
+        mock_ordered.offset.return_value = mock_offset
+        mock_limit = Mock()
+        mock_offset.limit.return_value = mock_limit
+        mock_limit.all.return_value = mock_jobs
 
         mock_db.query.return_value = mock_query
 
@@ -348,14 +353,21 @@ class TestListJobs:
         assert data["total"] == 3
         assert len(data["items"]) == 3
         assert data["page"] == 1
+        assert data["has_next"] is False
+        assert data["next_cursor"] is None
 
     def test_list_jobs_filter_by_status(self, test_client, mock_db, test_user):
         """Test filtering jobs by status."""
 
         mock_query = Mock()
         mock_query.filter.return_value = mock_query
-        mock_query.count.return_value = 1
-        mock_query.offset.return_value.limit.return_value.all.return_value = []
+        mock_ordered = Mock()
+        mock_query.order_by.return_value = mock_ordered
+        mock_offset = Mock()
+        mock_ordered.offset.return_value = mock_offset
+        mock_limit = Mock()
+        mock_offset.limit.return_value = mock_limit
+        mock_limit.all.return_value = []
 
         mock_db.query.return_value = mock_query
 
@@ -372,6 +384,62 @@ class TestListJobs:
         app.dependency_overrides.clear()
 
         assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["total"] == 0
+        assert data["has_next"] is False
+        assert data["next_cursor"] is None
+
+    def test_list_jobs_with_has_next(self, test_client, mock_db, test_user):
+        """Ensure pagination returns cursor when more results are available."""
+
+        job1 = Mock(spec=Job)
+        job1.id = uuid4()
+        job1.job_type = JobType.FEATURE_SELECTION
+        job1.status = JobStatus.RUNNING
+        job1.user_id = test_user.id
+        job1.dataset_id = uuid4()
+        job1.created_at = datetime.utcnow()
+        job1.result_id = None
+
+        job2 = Mock(spec=Job)
+        job2.id = uuid4()
+        job2.job_type = JobType.FEATURE_SELECTION
+        job2.status = JobStatus.PENDING
+        job2.user_id = test_user.id
+        job2.dataset_id = uuid4()
+        job2.created_at = datetime.utcnow()
+        job2.result_id = None
+
+        mock_query = Mock()
+        mock_query.filter.return_value = mock_query
+        mock_ordered = Mock()
+        mock_query.order_by.return_value = mock_ordered
+        mock_offset = Mock()
+        mock_ordered.offset.return_value = mock_offset
+        mock_limit = Mock()
+        mock_offset.limit.return_value = mock_limit
+        mock_limit.all.return_value = [job1, job2]
+
+        mock_db.query.return_value = mock_query
+
+        from omicselector2.api.dependencies import get_current_user
+
+        async def override_get_current_user():
+            return test_user
+
+        app.dependency_overrides[get_current_user] = override_get_current_user
+        app.dependency_overrides[lambda: None] = lambda: mock_db
+
+        response = test_client.get("/api/v1/jobs/?page=1&size=1")
+
+        app.dependency_overrides.clear()
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["total"] is None
+        assert data["has_next"] is True
+        assert isinstance(data["next_cursor"], str)
+        assert len(data["items"]) == 1
 
 
 class TestCancelJob:

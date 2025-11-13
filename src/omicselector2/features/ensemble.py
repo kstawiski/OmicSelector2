@@ -598,6 +598,8 @@ def soft_vote(
 
     # Normalize weights
     weight_sum = sum(weights.values())
+    if weight_sum == 0:
+        raise ValueError("Sum of weights cannot be zero.")
     normalized_weights = {m: w / weight_sum for m, w in weights.items()}
 
     # Collect all features

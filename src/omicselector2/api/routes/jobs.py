@@ -3,7 +3,11 @@
 This module provides endpoints for creating, managing, and monitoring analysis jobs.
 """
 
+import base64
+import binascii
+import json
 import logging
+from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
@@ -25,6 +29,7 @@ except ImportError:
     Field = None  # type: ignore
 
 try:
+    from sqlalchemy import and_, or_
     from sqlalchemy.orm import Session
 
     SQLALCHEMY_AVAILABLE = True
@@ -92,19 +97,14 @@ class JobResponse(BaseModel):
 
 
 class JobListResponse(BaseModel):
-    """Paginated job list response.
-
-    Attributes:
-        items: List of jobs
-        total: Total number of jobs
-        page: Current page number
-        size: Page size
-    """
+    """Paginated or cursor-based job list response."""
 
     items: list[JobResponse]
-    total: int
-    page: int
     size: int
+    total: Optional[int] = None
+    page: Optional[int] = None
+    has_next: bool = False
+    next_cursor: Optional[str] = None
 
 
 class ResultResponse(BaseModel):
@@ -125,6 +125,34 @@ class ResultResponse(BaseModel):
     metrics: Optional[dict]
     artifacts_path: Optional[str]
     created_at: str
+
+
+def _encode_cursor(job: Job) -> str:
+    """Create a cursor token from a job instance."""
+
+    payload = {
+        "created_at": job.created_at.isoformat(),
+        "id": str(job.id),
+    }
+    return base64.urlsafe_b64encode(json.dumps(payload).encode("utf-8")).decode(
+        "utf-8"
+    )
+
+
+def _decode_cursor(cursor: str) -> tuple[datetime, UUID]:
+    """Decode a cursor token into timestamp and UUID components."""
+
+    try:
+        raw = base64.urlsafe_b64decode(cursor.encode("utf-8")).decode("utf-8")
+        payload = json.loads(raw)
+        created_at_str = payload["created_at"]
+        job_id_str = payload["id"]
+    except (binascii.Error, json.JSONDecodeError, KeyError, TypeError) as exc:
+        raise ValueError("Invalid cursor payload") from exc
+
+    created_at = datetime.fromisoformat(created_at_str)
+    job_id = UUID(job_id_str)
+    return created_at, job_id
 
 
 if not FASTAPI_AVAILABLE:
@@ -231,8 +259,14 @@ else:
                     db.commit()
         except Exception as e:
             logger.error(f"Failed to submit Celery task: {str(e)}")
-            # Don't fail job creation if Celery submission fails
-            # Job will remain in PENDING state for manual intervention
+            new_job.status = JobStatus.FAILED
+            new_job.error_message = "Failed to queue job for execution"
+            new_job.completed_at = datetime.utcnow()
+            db.commit()
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Failed to queue job for execution. Please try again later.",
+            ) from e
 
         return JobResponse(
             id=str(new_job.id),
@@ -314,9 +348,16 @@ else:
 
     @router.get("/", response_model=JobListResponse)
     async def list_jobs(
-        page: int = Query(1, ge=1, description="Page number"),
+        page: int = Query(1, ge=1, description="Page number (used when cursor is not provided)"),
         size: int = Query(50, ge=1, le=100, description="Page size"),
         status_filter: Optional[str] = Query(None, alias="status", description="Filter by status"),
+        cursor: Optional[str] = Query(
+            None,
+            description=(
+                "Cursor token for keyset pagination. "
+                "Provides better performance on large tables."
+            ),
+        ),
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db),
     ):
@@ -359,13 +400,44 @@ else:
                     detail=f"Invalid status. Valid values: {', '.join([s.value for s in JobStatus])}",
                 )
 
-        # Get total count
-        total = query.count()
+        query = query.order_by(Job.created_at.desc(), Job.id.desc())
 
-        # Get paginated results
-        jobs = query.order_by(Job.created_at.desc()).offset((page - 1) * size).limit(size).all()
+        has_next = False
+        next_cursor = None
+        total: Optional[int] = None
+        page_value: Optional[int] = None
 
-        # Convert to response models
+        if cursor:
+            try:
+                cursor_created_at, cursor_id = _decode_cursor(cursor)
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid cursor value",
+                )
+
+            query = query.filter(
+                or_(
+                    Job.created_at < cursor_created_at,
+                    and_(Job.created_at == cursor_created_at, Job.id < cursor_id),
+                )
+            )
+
+            jobs = query.limit(size + 1).all()
+            if len(jobs) > size:
+                has_next = True
+                next_cursor = _encode_cursor(jobs[-1])
+                jobs = jobs[:-1]
+        else:
+            jobs = query.offset((page - 1) * size).limit(size + 1).all()
+            if len(jobs) > size:
+                has_next = True
+                next_cursor = _encode_cursor(jobs[-1])
+                jobs = jobs[:-1]
+            page_value = page
+            if not has_next and page == 1:
+                total = len(jobs)
+
         items = [
             JobResponse(
                 id=str(j.id),
@@ -386,8 +458,10 @@ else:
         return JobListResponse(
             items=items,
             total=total,
-            page=page,
+            page=page_value,
             size=size,
+            has_next=has_next,
+            next_cursor=next_cursor,
         )
 
     @router.delete("/{job_id}")
