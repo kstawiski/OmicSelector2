@@ -1101,6 +1101,10 @@ if CELERY_AVAILABLE and celery_app:
                 n_features = config.get('n_features', 100)
                 cv_folds = config.get('cv_folds', 5)
 
+                # Get stability and ensemble config
+                stability_config = config.get('stability', None)
+                ensemble_config = config.get('ensemble', None)
+
                 # Update task state
                 self.update_state(state='PROGRESS', meta={'status': 'Running feature selection'})
 
@@ -1120,23 +1124,108 @@ if CELERY_AVAILABLE and celery_app:
                     'relieff': run_relieff_feature_selection,
                 }
 
-                # Run feature selection with first specified method
-                # TODO: Support running multiple methods and aggregating results
-                method_name = methods[0] if isinstance(methods, list) else methods
+                # Determine execution mode
+                if ensemble_config and len(methods) > 1:
+                    # ENSEMBLE MODE: Run multiple methods and combine
+                    logger.info(f"Running ensemble of {len(methods)} methods")
 
-                if method_name not in method_functions:
-                    available_methods = ', '.join(method_functions.keys())
-                    raise ValueError(
-                        f"Method '{method_name}' not implemented. "
-                        f"Available methods: {available_methods}"
+                    from omicselector2.features.ensemble import EnsembleFeatureSelector
+
+                    # Get method functions
+                    selector_funcs = []
+                    for method_name in methods:
+                        if method_name not in method_functions:
+                            logger.warning(f"Skipping unknown method: {method_name}")
+                            continue
+                        selector_funcs.append(method_functions[method_name])
+
+                    if len(selector_funcs) < 2:
+                        raise ValueError("Ensemble requires at least 2 valid methods")
+
+                    # Create ensemble selector
+                    ensemble_method = ensemble_config.get('method', 'majority_vote')
+                    min_votes = ensemble_config.get('min_votes', 2)
+                    ensemble_n_features = ensemble_config.get('n_features', n_features)
+
+                    ensemble_selector = EnsembleFeatureSelector(
+                        base_selectors=selector_funcs,
+                        ensemble_method=ensemble_method,
+                        min_votes=min_votes,
+                        n_features=ensemble_n_features,
+                        verbose=True
                     )
 
-                method_func = method_functions[method_name]
-                selected_features, metrics = method_func(
-                    X, y, cv=cv_folds, n_features=n_features
-                )
+                    selected_features, metrics = ensemble_selector.select_features(
+                        X, y, n_features=n_features, cv=cv_folds
+                    )
 
-                logger.info(f"Selected {len(selected_features)} features")
+                    logger.info(f"Ensemble selected {len(selected_features)} features")
+
+                elif stability_config:
+                    # STABILITY MODE: Wrap method with stability selection
+                    method_name = methods[0] if isinstance(methods, list) else methods
+
+                    if method_name not in method_functions:
+                        available_methods = ', '.join(method_functions.keys())
+                        raise ValueError(
+                            f"Method '{method_name}' not implemented. "
+                            f"Available methods: {available_methods}"
+                        )
+
+                    logger.info(f"Running {method_name} with stability selection")
+
+                    from omicselector2.features.stability import StabilitySelector
+
+                    # Create stability selector
+                    n_bootstraps = stability_config.get('n_bootstraps', 100)
+                    threshold = stability_config.get('threshold', 0.6)
+                    sample_fraction = stability_config.get('sample_fraction', 0.8)
+
+                    method_func = method_functions[method_name]
+                    stability_selector = StabilitySelector(
+                        base_selector=method_func,
+                        n_bootstraps=n_bootstraps,
+                        threshold=threshold,
+                        sample_fraction=sample_fraction,
+                        random_state=42,
+                        verbose=True
+                    )
+
+                    selected_features, stability_scores = stability_selector.select_stable_features(
+                        X, y, n_features=n_features, cv=cv_folds
+                    )
+
+                    # Create metrics dict
+                    metrics = {
+                        'method': f"{method_name}_stability",
+                        'n_features_selected': len(selected_features),
+                        'n_bootstraps': n_bootstraps,
+                        'threshold': threshold,
+                        'stability_scores': {f: stability_scores[f] for f in selected_features}
+                    }
+
+                    logger.info(
+                        f"Stability selection selected {len(selected_features)} features "
+                        f"(threshold={threshold})"
+                    )
+
+                else:
+                    # SINGLE METHOD MODE: Run one method
+                    method_name = methods[0] if isinstance(methods, list) else methods
+
+                    if method_name not in method_functions:
+                        available_methods = ', '.join(method_functions.keys())
+                        raise ValueError(
+                            f"Method '{method_name}' not implemented. "
+                            f"Available methods: {available_methods}"
+                        )
+
+                    method_func = method_functions[method_name]
+                    selected_features, metrics = method_func(
+                        X, y, cv=cv_folds, n_features=n_features
+                    )
+
+                    logger.info(f"Selected {len(selected_features)} features")
 
                 # Create result record
                 result = Result(
