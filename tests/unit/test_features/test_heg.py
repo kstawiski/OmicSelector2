@@ -53,9 +53,7 @@ def sample_expression_data() -> tuple[pd.DataFrame, pd.Series]:
         expr = np.random.gamma(0.5, 0.5, n_cells)  # Low mean
         X_data.append(expr)
 
-    X = pd.DataFrame(
-        np.array(X_data).T, columns=[f"gene_{i}" for i in range(n_genes)]
-    )
+    X = pd.DataFrame(np.array(X_data).T, columns=[f"gene_{i}" for i in range(n_genes)])
 
     # Binary cell type labels
     y = pd.Series(np.random.binomial(1, 0.5, n_cells))
@@ -78,9 +76,7 @@ class TestHEGSelector:
         assert selector.n_features_to_select == 20
         assert selector.metric == "mean"
 
-    def test_fit_with_mean(
-        self, sample_expression_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_fit_with_mean(self, sample_expression_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test fitting with mean expression metric."""
         X, y = sample_expression_data
 
@@ -99,9 +95,7 @@ class TestHEGSelector:
         # Selected genes should have higher mean than non-selected
         assert np.mean(selected_means) > np.mean(non_selected_means)
 
-    def test_fit_with_median(
-        self, sample_expression_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_fit_with_median(self, sample_expression_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test fitting with median expression metric."""
         X, y = sample_expression_data
 
@@ -110,9 +104,7 @@ class TestHEGSelector:
 
         assert len(selector.selected_features_) == 20
 
-    def test_fit_with_sum(
-        self, sample_expression_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_fit_with_sum(self, sample_expression_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test fitting with sum expression metric."""
         X, y = sample_expression_data
 
@@ -121,9 +113,7 @@ class TestHEGSelector:
 
         assert len(selector.selected_features_) == 20
 
-    def test_transform(
-        self, sample_expression_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_transform(self, sample_expression_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test transform method."""
         X, y = sample_expression_data
 
@@ -137,9 +127,7 @@ class TestHEGSelector:
         assert X_transformed.shape[1] == 15
         assert list(X_transformed.columns) == selector.selected_features_
 
-    def test_fit_transform(
-        self, sample_expression_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_fit_transform(self, sample_expression_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test fit_transform method."""
         X, y = sample_expression_data
 
@@ -148,9 +136,7 @@ class TestHEGSelector:
 
         assert X_transformed.shape[1] == 15
 
-    def test_get_support(
-        self, sample_expression_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_get_support(self, sample_expression_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test get_support method."""
         X, y = sample_expression_data
 
@@ -193,14 +179,10 @@ class TestHEGSelector:
         selector.fit(X, y)
 
         # Check that selected features are sorted by expression (descending)
-        selected_expression = [
-            selector.expression_levels_[f] for f in selector.selected_features_
-        ]
+        selected_expression = [selector.expression_levels_[f] for f in selector.selected_features_]
         assert selected_expression == sorted(selected_expression, reverse=True)
 
-    def test_mean_calculation(
-        self, sample_expression_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_mean_calculation(self, sample_expression_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test mean expression calculation."""
         X, y = sample_expression_data
 
@@ -213,9 +195,7 @@ class TestHEGSelector:
         calculated_mean = selector.expression_levels_["gene_0"]
         assert np.abs(calculated_mean - expected_mean) < 1e-6
 
-    def test_get_result(
-        self, sample_expression_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_get_result(self, sample_expression_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test get_result returns metadata."""
         X, y = sample_expression_data
 
@@ -230,9 +210,7 @@ class TestHEGSelector:
         assert "metric" in result.metadata
         assert "expression_levels" in result.metadata
 
-    def test_reproducibility(
-        self, sample_expression_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_reproducibility(self, sample_expression_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test that HEG is deterministic (no randomness)."""
         X, y = sample_expression_data
 

@@ -5,7 +5,6 @@ in S3-compatible object storage (AWS S3 or MinIO).
 """
 
 import io
-from pathlib import Path
 from typing import Optional
 
 try:
@@ -43,8 +42,7 @@ class StorageClient:
         """
         if not BOTO3_AVAILABLE:
             raise ImportError(
-                "boto3 is required for storage operations. "
-                "Install with: pip install boto3"
+                "boto3 is required for storage operations. " "Install with: pip install boto3"
             )
 
         settings = get_settings()
@@ -94,9 +92,7 @@ class StorageClient:
         if metadata:
             extra_args["Metadata"] = metadata
 
-        self.client.upload_fileobj(
-            file_obj, self.bucket_name, object_name, ExtraArgs=extra_args
-        )
+        self.client.upload_fileobj(file_obj, self.bucket_name, object_name, ExtraArgs=extra_args)
 
         return f"s3://{self.bucket_name}/{object_name}"
 
@@ -174,9 +170,7 @@ class StorageClient:
 
         return [obj["Key"] for obj in response["Contents"]]
 
-    def get_presigned_url(
-        self, object_name: str, expiration: int = 3600
-    ) -> Optional[str]:
+    def get_presigned_url(self, object_name: str, expiration: int = 3600) -> Optional[str]:
         """Generate a presigned URL for downloading a file.
 
         Args:

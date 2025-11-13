@@ -51,7 +51,7 @@ def mock_settings():
         MINIO_ENDPOINT="localhost:9000",
         MINIO_ACCESS_KEY="test_access_key",
         MINIO_SECRET_KEY="test_secret_key",
-        ENVIRONMENT="development"
+        ENVIRONMENT="development",
     )
 
     return settings

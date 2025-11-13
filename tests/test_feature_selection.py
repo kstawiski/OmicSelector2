@@ -12,6 +12,7 @@ import numpy as np
 try:
     import pandas as pd
     from sklearn.datasets import make_classification
+
     SKLEARN_AVAILABLE = True
 except ImportError:
     SKLEARN_AVAILABLE = False
@@ -45,7 +46,7 @@ def synthetic_dataset():
         n_repeated=0,
         n_classes=2,
         random_state=42,
-        shuffle=False
+        shuffle=False,
     )
 
     # Convert to DataFrame with feature names
@@ -63,9 +64,7 @@ class TestLassoFeatureSelection:
         """Test that Lasso selects a subset of features."""
         X, y = synthetic_dataset
 
-        selected_features, metrics = run_lasso_feature_selection(
-            X, y, cv=3, n_features=20
-        )
+        selected_features, metrics = run_lasso_feature_selection(X, y, cv=3, n_features=20)
 
         # Should select some features
         assert len(selected_features) > 0
@@ -78,9 +77,7 @@ class TestLassoFeatureSelection:
         """Test that metrics have expected structure."""
         X, y = synthetic_dataset
 
-        selected_features, metrics = run_lasso_feature_selection(
-            X, y, cv=3, n_features=20
-        )
+        selected_features, metrics = run_lasso_feature_selection(X, y, cv=3, n_features=20)
 
         # Check metrics structure
         assert "method" in metrics
@@ -103,9 +100,7 @@ class TestLassoFeatureSelection:
         X, y = synthetic_dataset
 
         # Request only 5 features
-        selected_features, metrics = run_lasso_feature_selection(
-            X, y, cv=3, n_features=5
-        )
+        selected_features, metrics = run_lasso_feature_selection(X, y, cv=3, n_features=5)
 
         # Should not select more than requested
         assert len(selected_features) <= 5
@@ -115,16 +110,12 @@ class TestLassoFeatureSelection:
         X, y = synthetic_dataset
 
         # Test with 5-fold CV
-        selected_5fold, metrics_5fold = run_lasso_feature_selection(
-            X, y, cv=5, n_features=10
-        )
+        selected_5fold, metrics_5fold = run_lasso_feature_selection(X, y, cv=5, n_features=10)
 
         assert metrics_5fold["cv_folds"] == 5
 
         # Test with 3-fold CV
-        selected_3fold, metrics_3fold = run_lasso_feature_selection(
-            X, y, cv=3, n_features=10
-        )
+        selected_3fold, metrics_3fold = run_lasso_feature_selection(X, y, cv=3, n_features=10)
 
         assert metrics_3fold["cv_folds"] == 3
 
@@ -133,13 +124,9 @@ class TestLassoFeatureSelection:
         X, y = synthetic_dataset
 
         # Run twice with same parameters
-        selected_1, metrics_1 = run_lasso_feature_selection(
-            X, y, cv=3, n_features=10
-        )
+        selected_1, metrics_1 = run_lasso_feature_selection(X, y, cv=3, n_features=10)
 
-        selected_2, metrics_2 = run_lasso_feature_selection(
-            X, y, cv=3, n_features=10
-        )
+        selected_2, metrics_2 = run_lasso_feature_selection(X, y, cv=3, n_features=10)
 
         # Should get same features (due to random_state=42)
         assert selected_1 == selected_2
@@ -149,10 +136,7 @@ class TestLassoFeatureSelection:
         """Test Lasso with a small dataset."""
         # Create tiny dataset
         np.random.seed(42)
-        X = pd.DataFrame(
-            np.random.randn(20, 10),
-            columns=[f"GENE_{i}" for i in range(10)]
-        )
+        X = pd.DataFrame(np.random.randn(20, 10), columns=[f"GENE_{i}" for i in range(10)])
         y = pd.Series(np.random.randint(0, 2, 20))
 
         selected_features, metrics = run_lasso_feature_selection(
@@ -167,9 +151,7 @@ class TestLassoFeatureSelection:
         """Test that feature names are correctly preserved."""
         X, y = synthetic_dataset
 
-        selected_features, metrics = run_lasso_feature_selection(
-            X, y, cv=3, n_features=10
-        )
+        selected_features, metrics = run_lasso_feature_selection(X, y, cv=3, n_features=10)
 
         # All selected features should start with "GENE_"
         assert all(f.startswith("GENE_") for f in selected_features)
@@ -185,16 +167,11 @@ class TestFeatureSelectionEdgeCases:
         """Test Lasso when no features are informative."""
         # Create dataset with pure noise
         np.random.seed(42)
-        X = pd.DataFrame(
-            np.random.randn(50, 20),
-            columns=[f"GENE_{i}" for i in range(20)]
-        )
+        X = pd.DataFrame(np.random.randn(50, 20), columns=[f"GENE_{i}" for i in range(20)])
         # Random target
         y = pd.Series(np.random.randint(0, 2, 50))
 
-        selected_features, metrics = run_lasso_feature_selection(
-            X, y, cv=3, n_features=10
-        )
+        selected_features, metrics = run_lasso_feature_selection(X, y, cv=3, n_features=10)
 
         # Might select few or no features
         assert len(selected_features) >= 0
@@ -213,9 +190,7 @@ class TestFeatureSelectionEdgeCases:
         # Target correlated with base
         y = pd.Series((base.ravel() > 0).astype(int))
 
-        selected_features, metrics = run_lasso_feature_selection(
-            X, y, cv=3, n_features=5
-        )
+        selected_features, metrics = run_lasso_feature_selection(X, y, cv=3, n_features=5)
 
         # Lasso should select a subset (L1 penalty encourages sparsity)
         assert len(selected_features) > 0
@@ -231,7 +206,7 @@ class TestFeatureSelectionEdgeCases:
             n_redundant=5,
             n_classes=2,
             random_state=42,
-            class_sep=2.0  # Increase class separation
+            class_sep=2.0,  # Increase class separation
         )
 
         X_df = pd.DataFrame(X, columns=[f"GENE_{i}" for i in range(X.shape[1])])
@@ -256,9 +231,7 @@ class TestRandomForestFeatureSelection:
         """Test that Random Forest selects a subset of features."""
         X, y = synthetic_dataset
 
-        selected_features, metrics = run_randomforest_feature_selection(
-            X, y, cv=3, n_features=20
-        )
+        selected_features, metrics = run_randomforest_feature_selection(X, y, cv=3, n_features=20)
 
         # Should select some features
         assert len(selected_features) > 0
@@ -271,9 +244,7 @@ class TestRandomForestFeatureSelection:
         """Test that metrics have expected structure."""
         X, y = synthetic_dataset
 
-        selected_features, metrics = run_randomforest_feature_selection(
-            X, y, cv=3, n_features=20
-        )
+        selected_features, metrics = run_randomforest_feature_selection(X, y, cv=3, n_features=20)
 
         # Check metrics structure
         assert "method" in metrics
@@ -296,9 +267,7 @@ class TestRandomForestFeatureSelection:
         X, y = synthetic_dataset
 
         # Request only 5 features
-        selected_features, metrics = run_randomforest_feature_selection(
-            X, y, cv=3, n_features=5
-        )
+        selected_features, metrics = run_randomforest_feature_selection(X, y, cv=3, n_features=5)
 
         # Should not select more than requested
         assert len(selected_features) <= 5
@@ -308,13 +277,9 @@ class TestRandomForestFeatureSelection:
         X, y = synthetic_dataset
 
         # Run twice with same parameters
-        selected_1, metrics_1 = run_randomforest_feature_selection(
-            X, y, cv=3, n_features=10
-        )
+        selected_1, metrics_1 = run_randomforest_feature_selection(X, y, cv=3, n_features=10)
 
-        selected_2, metrics_2 = run_randomforest_feature_selection(
-            X, y, cv=3, n_features=10
-        )
+        selected_2, metrics_2 = run_randomforest_feature_selection(X, y, cv=3, n_features=10)
 
         # Should get same features (due to random_state=42)
         assert selected_1 == selected_2
@@ -329,7 +294,7 @@ class TestRandomForestFeatureSelection:
             n_redundant=5,
             n_classes=2,
             random_state=42,
-            class_sep=2.0
+            class_sep=2.0,
         )
 
         X_df = pd.DataFrame(X, columns=[f"GENE_{i}" for i in range(X.shape[1])])
@@ -354,9 +319,7 @@ class TestElasticNetFeatureSelection:
         """Test that Elastic Net selects a subset of features."""
         X, y = synthetic_dataset
 
-        selected_features, metrics = run_elasticnet_feature_selection(
-            X, y, cv=3, n_features=20
-        )
+        selected_features, metrics = run_elasticnet_feature_selection(X, y, cv=3, n_features=20)
 
         # Should select some features
         assert len(selected_features) > 0
@@ -369,9 +332,7 @@ class TestElasticNetFeatureSelection:
         """Test that metrics have expected structure."""
         X, y = synthetic_dataset
 
-        selected_features, metrics = run_elasticnet_feature_selection(
-            X, y, cv=3, n_features=20
-        )
+        selected_features, metrics = run_elasticnet_feature_selection(X, y, cv=3, n_features=20)
 
         # Check metrics structure
         assert "method" in metrics
@@ -395,9 +356,7 @@ class TestElasticNetFeatureSelection:
         X, y = synthetic_dataset
 
         # Request only 5 features
-        selected_features, metrics = run_elasticnet_feature_selection(
-            X, y, cv=3, n_features=5
-        )
+        selected_features, metrics = run_elasticnet_feature_selection(X, y, cv=3, n_features=5)
 
         # Should not select more than requested
         assert len(selected_features) <= 5
@@ -407,13 +366,9 @@ class TestElasticNetFeatureSelection:
         X, y = synthetic_dataset
 
         # Run twice with same parameters
-        selected_1, metrics_1 = run_elasticnet_feature_selection(
-            X, y, cv=3, n_features=10
-        )
+        selected_1, metrics_1 = run_elasticnet_feature_selection(X, y, cv=3, n_features=10)
 
-        selected_2, metrics_2 = run_elasticnet_feature_selection(
-            X, y, cv=3, n_features=10
-        )
+        selected_2, metrics_2 = run_elasticnet_feature_selection(X, y, cv=3, n_features=10)
 
         # Should get same features (due to random_state=42)
         assert selected_1 == selected_2
@@ -429,7 +384,7 @@ class TestElasticNetFeatureSelection:
             n_redundant=5,
             n_classes=2,
             random_state=42,
-            class_sep=2.0
+            class_sep=2.0,
         )
 
         X_df = pd.DataFrame(X, columns=[f"GENE_{i}" for i in range(X.shape[1])])
@@ -454,9 +409,7 @@ class TestXGBoostFeatureSelection:
         """Test that XGBoost selects a subset of features."""
         X, y = synthetic_dataset
 
-        selected_features, metrics = run_xgboost_feature_selection(
-            X, y, cv=3, n_features=20
-        )
+        selected_features, metrics = run_xgboost_feature_selection(X, y, cv=3, n_features=20)
 
         # Should select some features
         assert len(selected_features) > 0
@@ -469,9 +422,7 @@ class TestXGBoostFeatureSelection:
         """Test that metrics have expected structure."""
         X, y = synthetic_dataset
 
-        selected_features, metrics = run_xgboost_feature_selection(
-            X, y, cv=3, n_features=20
-        )
+        selected_features, metrics = run_xgboost_feature_selection(X, y, cv=3, n_features=20)
 
         # Check metrics structure
         assert "method" in metrics
@@ -494,9 +445,7 @@ class TestXGBoostFeatureSelection:
         X, y = synthetic_dataset
 
         # Request only 5 features
-        selected_features, metrics = run_xgboost_feature_selection(
-            X, y, cv=3, n_features=5
-        )
+        selected_features, metrics = run_xgboost_feature_selection(X, y, cv=3, n_features=5)
 
         # Should not select more than requested
         assert len(selected_features) <= 5
@@ -506,13 +455,9 @@ class TestXGBoostFeatureSelection:
         X, y = synthetic_dataset
 
         # Run twice with same parameters
-        selected_1, metrics_1 = run_xgboost_feature_selection(
-            X, y, cv=3, n_features=10
-        )
+        selected_1, metrics_1 = run_xgboost_feature_selection(X, y, cv=3, n_features=10)
 
-        selected_2, metrics_2 = run_xgboost_feature_selection(
-            X, y, cv=3, n_features=10
-        )
+        selected_2, metrics_2 = run_xgboost_feature_selection(X, y, cv=3, n_features=10)
 
         # Should get same features (due to random_state=42)
         assert selected_1 == selected_2
@@ -527,7 +472,7 @@ class TestXGBoostFeatureSelection:
             n_redundant=5,
             n_classes=2,
             random_state=42,
-            class_sep=2.0
+            class_sep=2.0,
         )
 
         X_df = pd.DataFrame(X, columns=[f"GENE_{i}" for i in range(X.shape[1])])
@@ -603,13 +548,15 @@ class TestVarianceThresholdFeatureSelection:
         """Test that Variance Threshold filters out low-variance features."""
         # Create dataset with some constant features
         np.random.seed(42)
-        X = pd.DataFrame({
-            'GENE_0': np.random.randn(100),  # High variance
-            'GENE_1': np.ones(100),  # Zero variance (constant)
-            'GENE_2': np.random.randn(100) * 0.01,  # Very low variance
-            'GENE_3': np.random.randn(100),  # High variance
-            'GENE_4': np.array([0, 1] * 50),  # Binary, low variance
-        })
+        X = pd.DataFrame(
+            {
+                "GENE_0": np.random.randn(100),  # High variance
+                "GENE_1": np.ones(100),  # Zero variance (constant)
+                "GENE_2": np.random.randn(100) * 0.01,  # Very low variance
+                "GENE_3": np.random.randn(100),  # High variance
+                "GENE_4": np.array([0, 1] * 50),  # Binary, low variance
+            }
+        )
         y = pd.Series(np.random.randint(0, 2, 100))
 
         selected_features, metrics = run_variance_threshold_feature_selection(
@@ -619,7 +566,7 @@ class TestVarianceThresholdFeatureSelection:
         # Should select features (excluding constant one)
         assert len(selected_features) > 0
         # Constant feature should not be selected
-        assert 'GENE_1' not in selected_features
+        assert "GENE_1" not in selected_features
 
 
 class TestTTestFeatureSelection:
@@ -629,9 +576,7 @@ class TestTTestFeatureSelection:
         """Test that t-test selects a subset of features."""
         X, y = synthetic_dataset
 
-        selected_features, metrics = run_ttest_feature_selection(
-            X, y, cv=3, n_features=20
-        )
+        selected_features, metrics = run_ttest_feature_selection(X, y, cv=3, n_features=20)
 
         # Should select some features
         assert len(selected_features) > 0
@@ -644,9 +589,7 @@ class TestTTestFeatureSelection:
         """Test that metrics have expected structure."""
         X, y = synthetic_dataset
 
-        selected_features, metrics = run_ttest_feature_selection(
-            X, y, cv=3, n_features=20
-        )
+        selected_features, metrics = run_ttest_feature_selection(X, y, cv=3, n_features=20)
 
         # Check metrics structure
         assert "method" in metrics
@@ -673,9 +616,7 @@ class TestTTestFeatureSelection:
         X, y = synthetic_dataset
 
         # Request only 5 features
-        selected_features, metrics = run_ttest_feature_selection(
-            X, y, cv=3, n_features=5
-        )
+        selected_features, metrics = run_ttest_feature_selection(X, y, cv=3, n_features=5)
 
         # Should not select more than requested
         assert len(selected_features) <= 5
@@ -685,13 +626,9 @@ class TestTTestFeatureSelection:
         X, y = synthetic_dataset
 
         # Run twice with same parameters
-        selected_1, metrics_1 = run_ttest_feature_selection(
-            X, y, cv=3, n_features=10
-        )
+        selected_1, metrics_1 = run_ttest_feature_selection(X, y, cv=3, n_features=10)
 
-        selected_2, metrics_2 = run_ttest_feature_selection(
-            X, y, cv=3, n_features=10
-        )
+        selected_2, metrics_2 = run_ttest_feature_selection(X, y, cv=3, n_features=10)
 
         # Should get same features (t-test is deterministic)
         assert selected_1 == selected_2
@@ -706,7 +643,7 @@ class TestTTestFeatureSelection:
             n_redundant=5,
             n_classes=2,
             random_state=42,
-            class_sep=2.0
+            class_sep=2.0,
         )
 
         X_df = pd.DataFrame(X, columns=[f"GENE_{i}" for i in range(X.shape[1])])
@@ -736,7 +673,7 @@ def survival_dataset():
         n_repeated=0,
         n_classes=2,
         random_state=42,
-        shuffle=False
+        shuffle=False,
     )
 
     # Convert to DataFrame
@@ -751,10 +688,7 @@ def survival_dataset():
     events = np.random.binomial(1, 0.7, 100)
 
     # Create survival target DataFrame
-    y_survival = pd.DataFrame({
-        'time': times,
-        'event': events
-    })
+    y_survival = pd.DataFrame({"time": times, "event": events})
 
     return X_df, y_survival
 
@@ -766,9 +700,7 @@ class TestL1SVMFeatureSelection:
         """Test that L1-SVM selects a subset of features."""
         X, y = synthetic_dataset
 
-        selected_features, metrics = run_l1svm_feature_selection(
-            X, y, cv=3, n_features=20
-        )
+        selected_features, metrics = run_l1svm_feature_selection(X, y, cv=3, n_features=20)
 
         # Should select some features
         assert len(selected_features) > 0
@@ -781,9 +713,7 @@ class TestL1SVMFeatureSelection:
         """Test that metrics have expected structure."""
         X, y = synthetic_dataset
 
-        selected_features, metrics = run_l1svm_feature_selection(
-            X, y, cv=3, n_features=20
-        )
+        selected_features, metrics = run_l1svm_feature_selection(X, y, cv=3, n_features=20)
 
         # Check metrics structure
         assert "method" in metrics
@@ -806,9 +736,7 @@ class TestL1SVMFeatureSelection:
         X, y = synthetic_dataset
 
         # Request only 5 features
-        selected_features, metrics = run_l1svm_feature_selection(
-            X, y, cv=3, n_features=5
-        )
+        selected_features, metrics = run_l1svm_feature_selection(X, y, cv=3, n_features=5)
 
         # Should not select more than requested
         assert len(selected_features) <= 5
@@ -818,13 +746,9 @@ class TestL1SVMFeatureSelection:
         X, y = synthetic_dataset
 
         # Run twice with same parameters
-        selected_1, metrics_1 = run_l1svm_feature_selection(
-            X, y, cv=3, n_features=10
-        )
+        selected_1, metrics_1 = run_l1svm_feature_selection(X, y, cv=3, n_features=10)
 
-        selected_2, metrics_2 = run_l1svm_feature_selection(
-            X, y, cv=3, n_features=10
-        )
+        selected_2, metrics_2 = run_l1svm_feature_selection(X, y, cv=3, n_features=10)
 
         # Should get same features (due to random_state=42)
         assert selected_1 == selected_2
@@ -837,9 +761,7 @@ class TestRidgeFeatureSelection:
         """Test that Ridge selects a subset of features."""
         X, y = synthetic_dataset
 
-        selected_features, metrics = run_ridge_feature_selection(
-            X, y, cv=3, n_features=20
-        )
+        selected_features, metrics = run_ridge_feature_selection(X, y, cv=3, n_features=20)
 
         # Should select some features
         assert len(selected_features) > 0
@@ -852,9 +774,7 @@ class TestRidgeFeatureSelection:
         """Test that metrics have expected structure."""
         X, y = synthetic_dataset
 
-        selected_features, metrics = run_ridge_feature_selection(
-            X, y, cv=3, n_features=20
-        )
+        selected_features, metrics = run_ridge_feature_selection(X, y, cv=3, n_features=20)
 
         # Check metrics structure
         assert "method" in metrics
@@ -877,9 +797,7 @@ class TestRidgeFeatureSelection:
         X, y = synthetic_dataset
 
         # Request only 5 features
-        selected_features, metrics = run_ridge_feature_selection(
-            X, y, cv=3, n_features=5
-        )
+        selected_features, metrics = run_ridge_feature_selection(X, y, cv=3, n_features=5)
 
         # Should not select more than requested
         assert len(selected_features) <= 5
@@ -889,13 +807,9 @@ class TestRidgeFeatureSelection:
         X, y = synthetic_dataset
 
         # Run twice with same parameters
-        selected_1, metrics_1 = run_ridge_feature_selection(
-            X, y, cv=3, n_features=10
-        )
+        selected_1, metrics_1 = run_ridge_feature_selection(X, y, cv=3, n_features=10)
 
-        selected_2, metrics_2 = run_ridge_feature_selection(
-            X, y, cv=3, n_features=10
-        )
+        selected_2, metrics_2 = run_ridge_feature_selection(X, y, cv=3, n_features=10)
 
         # Should get same features (Ridge is deterministic with same data)
         assert selected_1 == selected_2
@@ -909,9 +823,7 @@ class TestCoxPHFeatureSelection:
         """Test that Cox PH selects a subset of features."""
         X, y_survival = survival_dataset
 
-        selected_features, metrics = run_coxph_feature_selection(
-            X, y_survival, n_features=20
-        )
+        selected_features, metrics = run_coxph_feature_selection(X, y_survival, n_features=20)
 
         # Should select some features
         assert len(selected_features) > 0
@@ -924,9 +836,7 @@ class TestCoxPHFeatureSelection:
         """Test that metrics have expected structure."""
         X, y_survival = survival_dataset
 
-        selected_features, metrics = run_coxph_feature_selection(
-            X, y_survival, n_features=20
-        )
+        selected_features, metrics = run_coxph_feature_selection(X, y_survival, n_features=20)
 
         # Check metrics structure
         assert "method" in metrics
@@ -948,9 +858,7 @@ class TestCoxPHFeatureSelection:
         X, y_survival = survival_dataset
 
         # Request only 5 features
-        selected_features, metrics = run_coxph_feature_selection(
-            X, y_survival, n_features=5
-        )
+        selected_features, metrics = run_coxph_feature_selection(X, y_survival, n_features=5)
 
         # Should not select more than requested
         assert len(selected_features) <= 5
@@ -959,18 +867,15 @@ class TestCoxPHFeatureSelection:
         """Test Cox PH with a small dataset."""
         # Create tiny survival dataset
         np.random.seed(42)
-        X = pd.DataFrame(
-            np.random.randn(30, 10),
-            columns=[f"GENE_{i}" for i in range(10)]
+        X = pd.DataFrame(np.random.randn(30, 10), columns=[f"GENE_{i}" for i in range(10)])
+        y_survival = pd.DataFrame(
+            {
+                "time": np.random.exponential(scale=10, size=30) + 1,
+                "event": np.random.binomial(1, 0.7, 30),
+            }
         )
-        y_survival = pd.DataFrame({
-            'time': np.random.exponential(scale=10, size=30) + 1,
-            'event': np.random.binomial(1, 0.7, 30)
-        })
 
-        selected_features, metrics = run_coxph_feature_selection(
-            X, y_survival, n_features=5
-        )
+        selected_features, metrics = run_coxph_feature_selection(X, y_survival, n_features=5)
 
         # Should still work
         assert isinstance(selected_features, list)
@@ -987,7 +892,7 @@ class TestCoxPHFeatureSelection:
             n_redundant=5,
             n_classes=2,
             random_state=42,
-            class_sep=2.0
+            class_sep=2.0,
         )
 
         X_df = pd.DataFrame(X, columns=[f"GENE_{i}" for i in range(X.shape[1])])
@@ -998,14 +903,9 @@ class TestCoxPHFeatureSelection:
         times = np.clip(times, 1, 100)  # Clip to reasonable range
         events = np.random.binomial(1, 0.75, 150)
 
-        y_survival = pd.DataFrame({
-            'time': times,
-            'event': events
-        })
+        y_survival = pd.DataFrame({"time": times, "event": events})
 
-        selected_features, metrics = run_coxph_feature_selection(
-            X_df, y_survival, n_features=20
-        )
+        selected_features, metrics = run_coxph_feature_selection(X_df, y_survival, n_features=20)
 
         # Should select features
         assert len(selected_features) > 0
@@ -1022,9 +922,7 @@ class TestMRMRFeatureSelection:
         """Test that mRMR selects a subset of features."""
         X, y = synthetic_dataset
 
-        selected_features, metrics = run_mrmr_feature_selection(
-            X, y, cv=3, n_features=20
-        )
+        selected_features, metrics = run_mrmr_feature_selection(X, y, cv=3, n_features=20)
 
         # Should select some features
         assert len(selected_features) > 0
@@ -1037,9 +935,7 @@ class TestMRMRFeatureSelection:
         """Test that metrics have expected structure."""
         X, y = synthetic_dataset
 
-        selected_features, metrics = run_mrmr_feature_selection(
-            X, y, cv=3, n_features=20
-        )
+        selected_features, metrics = run_mrmr_feature_selection(X, y, cv=3, n_features=20)
 
         # Check metrics structure
         assert "method" in metrics
@@ -1062,9 +958,7 @@ class TestMRMRFeatureSelection:
         X, y = synthetic_dataset
 
         # Request only 5 features
-        selected_features, metrics = run_mrmr_feature_selection(
-            X, y, cv=3, n_features=5
-        )
+        selected_features, metrics = run_mrmr_feature_selection(X, y, cv=3, n_features=5)
 
         # Should not select more than requested
         assert len(selected_features) <= 5
@@ -1079,15 +973,13 @@ class TestMRMRFeatureSelection:
             n_redundant=5,
             n_classes=2,
             random_state=42,
-            class_sep=2.0
+            class_sep=2.0,
         )
 
         X_df = pd.DataFrame(X, columns=[f"GENE_{i}" for i in range(X.shape[1])])
         y_series = pd.Series(y)
 
-        selected_features, metrics = run_mrmr_feature_selection(
-            X_df, y_series, cv=5, n_features=20
-        )
+        selected_features, metrics = run_mrmr_feature_selection(X_df, y_series, cv=5, n_features=20)
 
         # Should select features
         assert len(selected_features) > 0
@@ -1104,9 +996,7 @@ class TestBorutaFeatureSelection:
         """Test that Boruta selects a subset of features."""
         X, y = synthetic_dataset
 
-        selected_features, metrics = run_boruta_feature_selection(
-            X, y, cv=3, n_features=20
-        )
+        selected_features, metrics = run_boruta_feature_selection(X, y, cv=3, n_features=20)
 
         # Should select some features
         assert len(selected_features) > 0
@@ -1119,9 +1009,7 @@ class TestBorutaFeatureSelection:
         """Test that metrics have expected structure."""
         X, y = synthetic_dataset
 
-        selected_features, metrics = run_boruta_feature_selection(
-            X, y, cv=3, n_features=20
-        )
+        selected_features, metrics = run_boruta_feature_selection(X, y, cv=3, n_features=20)
 
         # Check metrics structure
         assert "method" in metrics
@@ -1144,9 +1032,7 @@ class TestBorutaFeatureSelection:
         X, y = synthetic_dataset
 
         # Request only 5 features
-        selected_features, metrics = run_boruta_feature_selection(
-            X, y, cv=3, n_features=5
-        )
+        selected_features, metrics = run_boruta_feature_selection(X, y, cv=3, n_features=5)
 
         # Should not select more than requested
         assert len(selected_features) <= 5
@@ -1156,13 +1042,9 @@ class TestBorutaFeatureSelection:
         X, y = synthetic_dataset
 
         # Run twice with same parameters
-        selected_1, metrics_1 = run_boruta_feature_selection(
-            X, y, cv=3, n_features=10
-        )
+        selected_1, metrics_1 = run_boruta_feature_selection(X, y, cv=3, n_features=10)
 
-        selected_2, metrics_2 = run_boruta_feature_selection(
-            X, y, cv=3, n_features=10
-        )
+        selected_2, metrics_2 = run_boruta_feature_selection(X, y, cv=3, n_features=10)
 
         # Should get same features (due to random_state=42)
         assert selected_1 == selected_2
@@ -1175,9 +1057,7 @@ class TestReliefFFeatureSelection:
         """Test that ReliefF selects features."""
         X, y = synthetic_dataset
 
-        selected_features, metrics = run_relieff_feature_selection(
-            X, y, cv=3, n_features=20
-        )
+        selected_features, metrics = run_relieff_feature_selection(X, y, cv=3, n_features=20)
 
         # Should select some features
         assert len(selected_features) > 0
@@ -1188,9 +1068,7 @@ class TestReliefFFeatureSelection:
         """Test that metrics have expected structure."""
         X, y = synthetic_dataset
 
-        selected_features, metrics = run_relieff_feature_selection(
-            X, y, cv=3, n_features=20
-        )
+        selected_features, metrics = run_relieff_feature_selection(X, y, cv=3, n_features=20)
 
         assert "method" in metrics
         assert metrics["method"] == "relieff"
@@ -1209,9 +1087,7 @@ class TestReliefFFeatureSelection:
         X, y = synthetic_dataset
 
         # Request only 5 features
-        selected_features, metrics = run_relieff_feature_selection(
-            X, y, cv=3, n_features=5
-        )
+        selected_features, metrics = run_relieff_feature_selection(X, y, cv=3, n_features=5)
 
         # Should not select more than requested
         assert len(selected_features) <= 5
@@ -1226,7 +1102,7 @@ class TestReliefFFeatureSelection:
             n_redundant=5,
             n_classes=2,
             random_state=42,
-            class_sep=2.0
+            class_sep=2.0,
         )
 
         X_df = pd.DataFrame(X, columns=[f"GENE_{i}" for i in range(X.shape[1])])

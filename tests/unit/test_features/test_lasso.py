@@ -18,15 +18,11 @@ def sample_regression_data() -> tuple[pd.DataFrame, pd.Series]:
 
     # Create data with some informative features
     X = pd.DataFrame(
-        np.random.randn(n_samples, n_features),
-        columns=[f"feature_{i}" for i in range(n_features)]
+        np.random.randn(n_samples, n_features), columns=[f"feature_{i}" for i in range(n_features)]
     )
 
     # Create target with dependencies on first 10 features
-    y = pd.Series(
-        X.iloc[:, :10].sum(axis=1) + np.random.randn(n_samples) * 0.1,
-        name="target"
-    )
+    y = pd.Series(X.iloc[:, :10].sum(axis=1) + np.random.randn(n_samples) * 0.1, name="target")
 
     return X, y
 
@@ -43,16 +39,12 @@ def sample_classification_data() -> tuple[pd.DataFrame, pd.Series]:
     n_features = 100
 
     X = pd.DataFrame(
-        np.random.randn(n_samples, n_features),
-        columns=[f"feature_{i}" for i in range(n_features)]
+        np.random.randn(n_samples, n_features), columns=[f"feature_{i}" for i in range(n_features)]
     )
 
     # Create binary target
     linear_combo = X.iloc[:, :10].sum(axis=1)
-    y = pd.Series(
-        (linear_combo > linear_combo.median()).astype(int),
-        name="target"
-    )
+    y = pd.Series((linear_combo > linear_combo.median()).astype(int), name="target")
 
     return X, y
 
@@ -157,12 +149,12 @@ def test_lasso_selector_with_cv(sample_regression_data: tuple) -> None:
     from omicselector2.features.classical.lasso import LassoSelector
 
     X, y = sample_regression_data
-    selector = LassoSelector(alpha='auto', cv=5)
+    selector = LassoSelector(alpha="auto", cv=5)
 
     selector.fit(X, y)
 
     # Check that optimal alpha was found
-    assert hasattr(selector, 'alpha_')
+    assert hasattr(selector, "alpha_")
     assert selector.alpha_ is not None
     assert selector.alpha_ > 0
 
@@ -187,7 +179,7 @@ def test_lasso_selector_classification(sample_classification_data: tuple) -> Non
     from omicselector2.features.classical.lasso import LassoSelector
 
     X, y = sample_classification_data
-    selector = LassoSelector(alpha=0.01, task='classification')
+    selector = LassoSelector(alpha=0.01, task="classification")
 
     selector.fit(X, y)
 
@@ -235,7 +227,4 @@ def test_lasso_selector_reproducibility(sample_regression_data: tuple) -> None:
     selector2.fit(X, y)
 
     assert selector1.selected_features_ == selector2.selected_features_
-    np.testing.assert_array_almost_equal(
-        selector1.feature_scores_,
-        selector2.feature_scores_
-    )
+    np.testing.assert_array_almost_equal(selector1.feature_scores_, selector2.feature_scores_)

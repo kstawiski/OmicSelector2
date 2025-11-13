@@ -59,8 +59,9 @@ def sample_regression_data() -> tuple[pd.DataFrame, pd.Series]:
 
     # Target strongly depends on first 10 features
     weights = np.random.rand(n_informative) * 2
-    y = pd.Series((X.iloc[:, :n_informative] * weights).sum(axis=1) +
-                  np.random.randn(n_samples) * 0.1)
+    y = pd.Series(
+        (X.iloc[:, :n_informative] * weights).sum(axis=1) + np.random.randn(n_samples) * 0.1
+    )
 
     return X, y
 
@@ -119,9 +120,7 @@ class TestBorutaSelector:
         assert X_transformed.shape[1] <= X.shape[1]
         assert hasattr(selector, "selected_features_")
 
-    def test_get_support(
-        self, sample_classification_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_get_support(self, sample_classification_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test get_support returns boolean mask of selected features."""
         X, y = sample_classification_data
         selector = BorutaSelector(n_estimators=50, max_iter=50)
@@ -148,9 +147,7 @@ class TestBorutaSelector:
         assert indices.dtype == np.int64 or indices.dtype == np.intp
         assert len(indices) == len(selector.selected_features_)
 
-    def test_regression_task(
-        self, sample_regression_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_regression_task(self, sample_regression_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test Boruta selector works for regression task."""
         X, y = sample_regression_data
         selector = BorutaSelector(task="regression", n_estimators=50, max_iter=50)
@@ -197,9 +194,7 @@ class TestBorutaSelector:
         with pytest.raises(ValueError, match="task must be 'regression' or 'classification'"):
             BorutaSelector(task="invalid")
 
-    def test_get_result(
-        self, sample_classification_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_get_result(self, sample_classification_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test get_result returns FeatureSelectorResult with correct structure."""
         X, y = sample_classification_data
         selector = BorutaSelector(n_estimators=50, max_iter=50)

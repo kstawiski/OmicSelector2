@@ -36,9 +36,8 @@ Examples:
 import pickle
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
-import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 
@@ -137,9 +136,7 @@ class BaseModel(ABC):
             RuntimeError: If model hasn't been fitted.
         """
         if not self.is_fitted_:
-            raise RuntimeError(
-                f"{self.__class__.__name__} must be fitted before calling predict()"
-            )
+            raise RuntimeError(f"{self.__class__.__name__} must be fitted before calling predict()")
 
 
 class BaseClassifier(BaseModel):

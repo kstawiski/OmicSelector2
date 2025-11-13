@@ -172,7 +172,9 @@ class TestTrainerBasicFit:
         assert "train_f1" in history
         assert len(history["train_accuracy"]) > 0
 
-    def test_fit_with_validation_data(self, classification_data: tuple[pd.DataFrame, pd.Series]) -> None:
+    def test_fit_with_validation_data(
+        self, classification_data: tuple[pd.DataFrame, pd.Series]
+    ) -> None:
         """Test fit() with validation data."""
         X, y = classification_data
         X_train, X_val = X[:80], X[80:]
@@ -200,7 +202,9 @@ class TestTrainerBasicFit:
         assert model.is_fitted_
         assert "train_mse" in history or "train_rmse" in history
 
-    def test_fit_raises_on_model_failure(self, classification_data: tuple[pd.DataFrame, pd.Series]) -> None:
+    def test_fit_raises_on_model_failure(
+        self, classification_data: tuple[pd.DataFrame, pd.Series]
+    ) -> None:
         """Test that fit() raises when model.fit() fails."""
         X, y = classification_data
         model = MockClassifier(fail_on_fit=True)
@@ -214,7 +218,9 @@ class TestTrainerBasicFit:
 class TestTrainerWithCallbacks:
     """Test Trainer with callbacks."""
 
-    def test_callbacks_are_triggered(self, classification_data: tuple[pd.DataFrame, pd.Series]) -> None:
+    def test_callbacks_are_triggered(
+        self, classification_data: tuple[pd.DataFrame, pd.Series]
+    ) -> None:
         """Test that callbacks are triggered during training."""
         X, y = classification_data
 
@@ -241,7 +247,9 @@ class TestTrainerWithCallbacks:
         assert tracker.on_train_begin_called
         assert tracker.on_train_end_called
 
-    def test_model_checkpoint_saves_model(self, classification_data: tuple[pd.DataFrame, pd.Series]) -> None:
+    def test_model_checkpoint_saves_model(
+        self, classification_data: tuple[pd.DataFrame, pd.Series]
+    ) -> None:
         """Test that ModelCheckpoint callback saves model."""
         X, y = classification_data
         X_train, X_val = X[:80], X[80:]
@@ -263,7 +271,9 @@ class TestTrainerWithCallbacks:
 class TestTrainerCrossValidation:
     """Test Trainer cross-validation integration."""
 
-    def test_cross_validate_returns_metrics(self, classification_data: tuple[pd.DataFrame, pd.Series]) -> None:
+    def test_cross_validate_returns_metrics(
+        self, classification_data: tuple[pd.DataFrame, pd.Series]
+    ) -> None:
         """Test that cross_validate() returns metrics."""
         X, y = classification_data
         model = MockClassifier()
@@ -277,7 +287,9 @@ class TestTrainerCrossValidation:
         assert "f1" in cv_results
         assert len(cv_results["accuracy"]) == 3  # 3 folds
 
-    def test_cross_validate_trains_multiple_times(self, classification_data: tuple[pd.DataFrame, pd.Series]) -> None:
+    def test_cross_validate_trains_multiple_times(
+        self, classification_data: tuple[pd.DataFrame, pd.Series]
+    ) -> None:
         """Test that cross_validate() trains model multiple times."""
         X, y = classification_data
         model = MockClassifier()
@@ -290,7 +302,9 @@ class TestTrainerCrossValidation:
         # Model should be fitted 5 times (one per fold)
         assert model.n_fit_calls == 5
 
-    def test_cross_validate_with_stratified(self, classification_data: tuple[pd.DataFrame, pd.Series]) -> None:
+    def test_cross_validate_with_stratified(
+        self, classification_data: tuple[pd.DataFrame, pd.Series]
+    ) -> None:
         """Test cross_validate() with stratified splitting."""
         X, y = classification_data
         model = MockClassifier()
@@ -306,18 +320,20 @@ class TestTrainerCrossValidation:
 class TestTrainerReproducibility:
     """Test Trainer reproducibility."""
 
-    def test_random_state_ensures_reproducibility(self, classification_data: tuple[pd.DataFrame, pd.Series]) -> None:
+    def test_random_state_ensures_reproducibility(
+        self, classification_data: tuple[pd.DataFrame, pd.Series]
+    ) -> None:
         """Test that random_state ensures reproducible results."""
         X, y = classification_data
 
         # Train twice with same random state
         model1 = MockClassifier()
         trainer1 = Trainer(model=model1, evaluator=ClassificationEvaluator(), random_state=42)
-        history1 = trainer1.fit(X, y)
+        trainer1.fit(X, y)
 
         model2 = MockClassifier()
         trainer2 = Trainer(model=model2, evaluator=ClassificationEvaluator(), random_state=42)
-        history2 = trainer2.fit(X, y)
+        trainer2.fit(X, y)
 
         # Results should be identical
         assert model1.last_X_shape == model2.last_X_shape
@@ -351,7 +367,9 @@ class TestTrainerStopTraining:
 class TestTrainerHistory:
     """Test Trainer history tracking."""
 
-    def test_history_attribute_exists(self, classification_data: tuple[pd.DataFrame, pd.Series]) -> None:
+    def test_history_attribute_exists(
+        self, classification_data: tuple[pd.DataFrame, pd.Series]
+    ) -> None:
         """Test that Trainer has history attribute after training."""
         X, y = classification_data
         model = MockClassifier()
@@ -363,7 +381,9 @@ class TestTrainerHistory:
         assert hasattr(trainer, "history")
         assert isinstance(trainer.history, dict)
 
-    def test_history_contains_metrics(self, classification_data: tuple[pd.DataFrame, pd.Series]) -> None:
+    def test_history_contains_metrics(
+        self, classification_data: tuple[pd.DataFrame, pd.Series]
+    ) -> None:
         """Test that history contains training metrics."""
         X, y = classification_data
         X_train, X_val = X[:80], X[80:]

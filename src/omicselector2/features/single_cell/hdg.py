@@ -99,9 +99,7 @@ class HDGSelector(BaseFeatureSelector):
         )
 
         if metric not in self.VALID_METRICS:
-            raise ValueError(
-                f"metric must be one of {self.VALID_METRICS}, got '{metric}'"
-            )
+            raise ValueError(f"metric must be one of {self.VALID_METRICS}, got '{metric}'")
 
         self.metric = metric
         self.min_mean = min_mean

@@ -134,9 +134,7 @@ def _encode_cursor(job: Job) -> str:
         "created_at": job.created_at.isoformat(),
         "id": str(job.id),
     }
-    return base64.urlsafe_b64encode(json.dumps(payload).encode("utf-8")).decode(
-        "utf-8"
-    )
+    return base64.urlsafe_b64encode(json.dumps(payload).encode("utf-8")).decode("utf-8")
 
 
 def _decode_cursor(cursor: str) -> tuple[datetime, UUID]:

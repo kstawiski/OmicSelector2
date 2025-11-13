@@ -133,15 +133,11 @@ class EnsembleSelector(BaseFeatureSelector):
 
         # Validate selectors
         if len(selectors) < 2:
-            raise ValueError(
-                f"At least 2 selectors required for ensemble, got {len(selectors)}"
-            )
+            raise ValueError(f"At least 2 selectors required for ensemble, got {len(selectors)}")
 
         # Validate strategy
         if strategy not in self.VALID_STRATEGIES:
-            raise ValueError(
-                f"strategy must be one of {self.VALID_STRATEGIES}, got '{strategy}'"
-            )
+            raise ValueError(f"strategy must be one of {self.VALID_STRATEGIES}, got '{strategy}'")
 
         # Validate threshold
         if not (0 < threshold <= 1):
@@ -195,7 +191,7 @@ class EnsembleSelector(BaseFeatureSelector):
         fitted_selectors = []
         for i, selector in enumerate(self.selectors):
             if self.verbose:
-                print(f"  Fitting selector {i+1}/{len(self.selectors)}...")
+                print(f"  Fitting selector {i + 1}/{len(self.selectors)}...")
             selector.fit(X, y)
             fitted_selectors.append(selector)
 
@@ -260,9 +256,7 @@ class EnsembleSelector(BaseFeatureSelector):
             if feature in selected_features:
                 self.support_mask_[i] = True
 
-    def _soft_voting(
-        self, X: pd.DataFrame, fitted_selectors: list[BaseFeatureSelector]
-    ) -> None:
+    def _soft_voting(self, X: pd.DataFrame, fitted_selectors: list[BaseFeatureSelector]) -> None:
         """Implement soft voting with weighted scores.
 
         Args:
@@ -296,9 +290,7 @@ class EnsembleSelector(BaseFeatureSelector):
         self.weighted_scores_ = weighted_scores
 
         # Sort features by weighted score
-        sorted_features = sorted(
-            weighted_scores.items(), key=lambda x: x[1], reverse=True
-        )
+        sorted_features = sorted(weighted_scores.items(), key=lambda x: x[1], reverse=True)
 
         # Select top-k features
         if self.n_features_to_select is not None:
@@ -352,9 +344,7 @@ class EnsembleSelector(BaseFeatureSelector):
         self.consensus_scores_ = borda_counts
 
         # Sort by Borda count
-        sorted_features = sorted(
-            borda_counts.items(), key=lambda x: x[1], reverse=True
-        )
+        sorted_features = sorted(borda_counts.items(), key=lambda x: x[1], reverse=True)
 
         # Select top-k features
         if self.n_features_to_select is not None:
@@ -376,9 +366,7 @@ class EnsembleSelector(BaseFeatureSelector):
             if feature in selected_features:
                 self.support_mask_[i] = True
 
-    def _intersection(
-        self, X: pd.DataFrame, fitted_selectors: list[BaseFeatureSelector]
-    ) -> None:
+    def _intersection(self, X: pd.DataFrame, fitted_selectors: list[BaseFeatureSelector]) -> None:
         """Implement intersection strategy (features selected by ALL).
 
         Args:
@@ -408,9 +396,7 @@ class EnsembleSelector(BaseFeatureSelector):
         self.vote_counts_ = vote_counts
 
         # Sort by vote count (should all be equal for intersection)
-        selected_features = sorted(
-            common_features, key=lambda f: vote_counts[f], reverse=True
-        )
+        selected_features = sorted(common_features, key=lambda f: vote_counts[f], reverse=True)
 
         # Limit to n_features_to_select if specified
         if self.n_features_to_select is not None:
@@ -426,9 +412,7 @@ class EnsembleSelector(BaseFeatureSelector):
             if feature in selected_features:
                 self.support_mask_[i] = True
 
-    def _union(
-        self, X: pd.DataFrame, fitted_selectors: list[BaseFeatureSelector]
-    ) -> None:
+    def _union(self, X: pd.DataFrame, fitted_selectors: list[BaseFeatureSelector]) -> None:
         """Implement union strategy (features selected by ANY).
 
         Args:
@@ -446,9 +430,7 @@ class EnsembleSelector(BaseFeatureSelector):
         self.vote_counts_ = vote_counts
 
         # Select all features with at least 1 vote
-        selected_features = [
-            feature for feature, votes in vote_counts.items() if votes >= 1
-        ]
+        selected_features = [feature for feature, votes in vote_counts.items() if votes >= 1]
 
         # Sort by vote count (descending)
         selected_features.sort(key=lambda f: vote_counts[f], reverse=True)
@@ -532,9 +514,8 @@ class EnsembleSelector(BaseFeatureSelector):
 
 # Utility functions for ensemble feature selection
 
-def majority_vote(
-    selection_results: dict[str, list[str]], min_votes: int = 2
-) -> list[str]:
+
+def majority_vote(selection_results: dict[str, list[str]], min_votes: int = 2) -> list[str]:
     """Select features by majority voting.
 
     Args:
@@ -560,9 +541,7 @@ def majority_vote(
             vote_counts[feature] = vote_counts.get(feature, 0) + 1
 
     # Select features with enough votes
-    selected = [
-        feature for feature, votes in vote_counts.items() if votes >= min_votes
-    ]
+    selected = [feature for feature, votes in vote_counts.items() if votes >= min_votes]
 
     # Sort by vote count (descending)
     selected.sort(key=lambda f: vote_counts[f], reverse=True)
@@ -625,9 +604,9 @@ def soft_vote(
         aggregated_scores[feature] = weighted_score
 
     # Sort and select top-k
-    sorted_features = sorted(
-        aggregated_scores.items(), key=lambda x: x[1], reverse=True
-    )[:n_features]
+    sorted_features = sorted(aggregated_scores.items(), key=lambda x: x[1], reverse=True)[
+        :n_features
+    ]
 
     selected_features = [f for f, _ in sorted_features]
 
@@ -635,7 +614,7 @@ def soft_vote(
 
 
 def consensus_ranking(
-    selection_results: dict[str, list[str]], method: str = 'borda_count'
+    selection_results: dict[str, list[str]], method: str = "borda_count"
 ) -> list[str]:
     """Create consensus ranking from multiple selection results.
 
@@ -658,7 +637,7 @@ def consensus_ranking(
         >>> consensus_ranking(results, method='borda_count')
         ['GENE_0', 'GENE_2', 'GENE_1', 'GENE_3']
     """
-    if method == 'borda_count':
+    if method == "borda_count":
         # Borda count: top ranked gets n points, second gets n-1, etc.
         borda_counts: dict[str, int] = {}
 
@@ -678,7 +657,7 @@ def consensus_ranking(
         ranked = sorted(borda_counts.keys(), key=lambda f: borda_counts[f], reverse=True)
         return ranked
 
-    elif method == 'mean_rank':
+    elif method == "mean_rank":
         # Average rank across methods (lower is better)
         rank_sums: dict[str, float] = {}
         rank_counts: dict[str, int] = {}
@@ -694,15 +673,13 @@ def consensus_ranking(
                 rank_counts[feature] = rank_counts.get(feature, 0) + 1
 
         # Calculate mean rank
-        mean_ranks = {
-            f: rank_sums[f] / rank_counts[f] for f in rank_sums.keys()
-        }
+        mean_ranks = {f: rank_sums[f] / rank_counts[f] for f in rank_sums.keys()}
 
         # Sort by mean rank (lower is better)
         ranked = sorted(mean_ranks.keys(), key=lambda f: mean_ranks[f])
         return ranked
 
-    elif method == 'mean_score':
+    elif method == "mean_score":
         # Average normalized scores
         score_sums: dict[str, float] = {}
         score_counts: dict[str, int] = {}
@@ -719,9 +696,7 @@ def consensus_ranking(
                 score_counts[feature] = score_counts.get(feature, 0) + 1
 
         # Calculate mean score
-        mean_scores = {
-            f: score_sums[f] / score_counts[f] for f in score_sums.keys()
-        }
+        mean_scores = {f: score_sums[f] / score_counts[f] for f in score_sums.keys()}
 
         # Sort by mean score (higher is better)
         ranked = sorted(mean_scores.keys(), key=lambda f: mean_scores[f], reverse=True)
@@ -821,17 +796,17 @@ class EnsembleFeatureSelector:
     """
 
     VALID_METHODS = [
-        'majority_vote',
-        'soft_vote',
-        'consensus_ranking',
-        'intersection',
-        'union',
+        "majority_vote",
+        "soft_vote",
+        "consensus_ranking",
+        "intersection",
+        "union",
     ]
 
     def __init__(
         self,
         base_selectors: list,
-        ensemble_method: str = 'majority_vote',
+        ensemble_method: str = "majority_vote",
         min_votes: int = 2,
         n_features: Optional[int] = None,
         weights: Optional[dict[str, float]] = None,
@@ -840,14 +815,11 @@ class EnsembleFeatureSelector:
         """Initialize ensemble selector."""
         if ensemble_method not in self.VALID_METHODS:
             raise ValueError(
-                f"ensemble_method must be one of {self.VALID_METHODS}, "
-                f"got '{ensemble_method}'"
+                f"ensemble_method must be one of {self.VALID_METHODS}, " f"got '{ensemble_method}'"
             )
 
         if len(base_selectors) < 2:
-            raise ValueError(
-                f"At least 2 selectors required, got {len(base_selectors)}"
-            )
+            raise ValueError(f"At least 2 selectors required, got {len(base_selectors)}")
 
         self.base_selectors = base_selectors
         self.ensemble_method = ensemble_method
@@ -882,21 +854,21 @@ class EnsembleFeatureSelector:
 
         for i, selector_func in enumerate(self.base_selectors):
             if self.verbose:
-                method_name = getattr(selector_func, '__name__', f'method_{i}')
+                method_name = getattr(selector_func, "__name__", f"method_{i}")
                 print(f"  Running {method_name}...")
 
             try:
                 selected, metrics = selector_func(X, y, cv=cv, n_features=n_features)
-                method_name = metrics.get('method', f'method_{i}')
+                method_name = metrics.get("method", f"method_{i}")
                 method_results[method_name] = selected
 
                 # Extract scores if available
-                if 'importance_scores' in metrics:
-                    method_scores[method_name] = metrics['importance_scores']
-                elif 'mutual_information_scores' in metrics:
-                    method_scores[method_name] = metrics['mutual_information_scores']
-                elif 'relief_scores' in metrics:
-                    method_scores[method_name] = metrics['relief_scores']
+                if "importance_scores" in metrics:
+                    method_scores[method_name] = metrics["importance_scores"]
+                elif "mutual_information_scores" in metrics:
+                    method_scores[method_name] = metrics["mutual_information_scores"]
+                elif "relief_scores" in metrics:
+                    method_scores[method_name] = metrics["relief_scores"]
 
             except Exception as e:
                 if self.verbose:
@@ -904,10 +876,10 @@ class EnsembleFeatureSelector:
                 continue
 
         # Apply ensemble strategy
-        if self.ensemble_method == 'majority_vote':
+        if self.ensemble_method == "majority_vote":
             selected_features = majority_vote(method_results, min_votes=self.min_votes)
 
-        elif self.ensemble_method == 'soft_vote':
+        elif self.ensemble_method == "soft_vote":
             if not method_scores:
                 # Fallback to majority vote if no scores available
                 selected_features = majority_vote(method_results, min_votes=self.min_votes)
@@ -917,42 +889,41 @@ class EnsembleFeatureSelector:
                     method_scores, n_features=n_select, weights=self.weights
                 )
 
-        elif self.ensemble_method == 'consensus_ranking':
+        elif self.ensemble_method == "consensus_ranking":
             # Use scores if available, otherwise use rankings
             if method_scores:
-                selected_features = consensus_ranking(method_scores, method='mean_score')
+                selected_features = consensus_ranking(method_scores, method="mean_score")
             else:
-                selected_features = consensus_ranking(method_results, method='borda_count')
+                selected_features = consensus_ranking(method_results, method="borda_count")
 
             # Limit to n_features
             if self.n_features:
-                selected_features = selected_features[:self.n_features]
+                selected_features = selected_features[: self.n_features]
 
-        elif self.ensemble_method == 'intersection':
+        elif self.ensemble_method == "intersection":
             selected_features = intersection_selection(method_results)
 
-        elif self.ensemble_method == 'union':
+        elif self.ensemble_method == "union":
             selected_features = union_selection(method_results)
             # Limit to n_features
             if self.n_features:
-                selected_features = selected_features[:self.n_features]
+                selected_features = selected_features[: self.n_features]
 
         else:
             raise ValueError(f"Unknown ensemble_method: {self.ensemble_method}")
 
         # Build metrics
         ensemble_metrics = {
-            'ensemble_method': self.ensemble_method,
-            'n_methods': len(method_results),
-            'n_features_selected': len(selected_features),
-            'method_results': method_results,
+            "ensemble_method": self.ensemble_method,
+            "n_methods": len(method_results),
+            "n_features_selected": len(selected_features),
+            "method_results": method_results,
         }
 
-        if method_scores and self.ensemble_method == 'soft_vote':
-            ensemble_metrics['aggregated_scores'] = aggregated_scores
+        if method_scores and self.ensemble_method == "soft_vote":
+            ensemble_metrics["aggregated_scores"] = aggregated_scores
 
         if self.verbose:
             print(f"Ensemble selected {len(selected_features)} features")
 
         return selected_features, ensemble_metrics
-

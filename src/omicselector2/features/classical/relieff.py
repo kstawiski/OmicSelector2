@@ -186,7 +186,7 @@ class ReliefFSelector(BaseFeatureSelector):
         sample_indices = rng.choice(n_samples, n_iter, replace=False)
 
         for idx in sample_indices:
-            instance = X[idx:idx+1]
+            instance = X[idx : idx + 1]
             instance_class = y[idx]
 
             # Find k nearest neighbors
@@ -245,7 +245,7 @@ class ReliefFSelector(BaseFeatureSelector):
             y_range = 1.0
 
         for idx in sample_indices:
-            instance = X[idx:idx+1]
+            instance = X[idx : idx + 1]
             instance_y = y[idx]
 
             # Find k nearest neighbors

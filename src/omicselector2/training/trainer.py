@@ -38,13 +38,12 @@ Examples:
     >>> cv_results = trainer.cross_validate(X, y, cv=cv)
 """
 
-import time
-from typing import Any, Optional, Union
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
 
-from omicselector2.models.base import BaseClassifier, BaseModel, BaseRegressor
+from omicselector2.models.base import BaseClassifier, BaseModel
 from omicselector2.training.callbacks import Callback
 from omicselector2.training.cross_validation import CrossValidator
 from omicselector2.training.evaluator import (
@@ -160,12 +159,12 @@ class Trainer:
             callback.on_train_begin(self)
 
         # Check if model supports incremental training (has partial_fit method)
-        has_partial_fit = hasattr(self.model.model, 'partial_fit')
-        
+        has_partial_fit = hasattr(self.model.model, "partial_fit")
+
         # For classical models without partial_fit, fit only once (epochs is ignored)
         # For models with partial_fit, the loop allows iterative training
         actual_epochs = epochs if has_partial_fit else 1
-        
+
         for epoch in range(1, actual_epochs + 1):
             # Trigger on_epoch_begin callbacks
             for callback in self.callbacks:

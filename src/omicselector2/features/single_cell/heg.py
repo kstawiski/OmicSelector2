@@ -94,14 +94,11 @@ class HEGSelector(BaseFeatureSelector):
         # Validate that exactly one of n_features_to_select or percentile is specified
         if n_features_to_select is not None and percentile is not None:
             raise ValueError(
-                "Cannot specify both n_features_to_select and percentile. "
-                "Choose one."
+                "Cannot specify both n_features_to_select and percentile. " "Choose one."
             )
 
         if n_features_to_select is None and percentile is None:
-            raise ValueError(
-                "Must specify either n_features_to_select or percentile"
-            )
+            raise ValueError("Must specify either n_features_to_select or percentile")
 
         super().__init__(
             n_features_to_select=n_features_to_select,
@@ -110,9 +107,7 @@ class HEGSelector(BaseFeatureSelector):
         )
 
         if metric not in self.VALID_METRICS:
-            raise ValueError(
-                f"metric must be one of {self.VALID_METRICS}, got '{metric}'"
-            )
+            raise ValueError(f"metric must be one of {self.VALID_METRICS}, got '{metric}'")
 
         self.metric = metric
         self.percentile = percentile
@@ -158,9 +153,7 @@ class HEGSelector(BaseFeatureSelector):
         self.expression_levels_ = expression_levels
 
         # Sort genes by expression level (descending)
-        sorted_genes = sorted(
-            expression_levels.items(), key=lambda x: x[1], reverse=True
-        )
+        sorted_genes = sorted(expression_levels.items(), key=lambda x: x[1], reverse=True)
 
         # Select genes based on n_features_to_select or percentile
         if self.n_features_to_select is not None:
@@ -169,12 +162,8 @@ class HEGSelector(BaseFeatureSelector):
             sorted_genes = sorted_genes[:n_select]
         else:
             # Select by percentile
-            percentile_value = np.percentile(
-                list(expression_levels.values()), self.percentile
-            )
-            sorted_genes = [
-                (g, level) for g, level in sorted_genes if level >= percentile_value
-            ]
+            percentile_value = np.percentile(list(expression_levels.values()), self.percentile)
+            sorted_genes = [(g, level) for g, level in sorted_genes if level >= percentile_value]
 
         selected_features = [gene for gene, _ in sorted_genes]
         feature_scores = np.array([level for _, level in sorted_genes])

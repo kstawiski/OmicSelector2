@@ -44,19 +44,18 @@ def differential_expression_data() -> tuple[pd.DataFrame, pd.Series]:
     # Highly significant features (first 10)
     for i in range(10):
         # Class 0: mean=0, Class 1: mean=3 (large effect)
-        feature = np.concatenate([
-            np.random.randn(50) * 0.5,  # Class 0
-            np.random.randn(50) * 0.5 + 3  # Class 1 (shifted)
-        ])
+        feature = np.concatenate(
+            [
+                np.random.randn(50) * 0.5,  # Class 0
+                np.random.randn(50) * 0.5 + 3,  # Class 1 (shifted)
+            ]
+        )
         X[f"gene_{i}"] = feature
 
     # Moderately significant features (next 10)
     for i in range(10, 20):
         # Class 0: mean=0, Class 1: mean=1 (medium effect)
-        feature = np.concatenate([
-            np.random.randn(50) * 0.5,
-            np.random.randn(50) * 0.5 + 1
-        ])
+        feature = np.concatenate([np.random.randn(50) * 0.5, np.random.randn(50) * 0.5 + 1])
         X[f"gene_{i}"] = feature
 
     # Non-significant features (rest)
@@ -105,15 +104,11 @@ class TestSignificanceSelector:
         highly_sig_genes = {f"gene_{i}" for i in range(10)}
         assert len(highly_sig_genes & selected_genes) >= 8  # At least 8/10
 
-    def test_sigtop_limits_to_n_features(
-        self, differential_expression_data: tuple
-    ) -> None:
+    def test_sigtop_limits_to_n_features(self, differential_expression_data: tuple) -> None:
         """Test that 'sigtop' limits to n_features_to_select."""
         X, y = differential_expression_data
 
-        selector = SignificanceSelector(
-            method="sigtop", n_features_to_select=10, alpha=0.05
-        )
+        selector = SignificanceSelector(method="sigtop", n_features_to_select=10, alpha=0.05)
         selector.fit(X, y)
 
         assert len(selector.selected_features_) == 10
@@ -139,9 +134,7 @@ class TestSignificanceSelector:
         # Should still select 10 features (limited by n_features_to_select)
         assert len(selector_bonf.selected_features_) == 10
 
-    def test_sigtopHolm_uses_holm_correction(
-        self, differential_expression_data: tuple
-    ) -> None:
+    def test_sigtopHolm_uses_holm_correction(self, differential_expression_data: tuple) -> None:
         """Test that 'sigtopHolm' uses Holm correction."""
         X, y = differential_expression_data
 
@@ -206,9 +199,7 @@ class TestFoldChangeSelector:
 
         assert selector.n_features_to_select == 20
 
-    def test_topFC_selects_by_fold_change(
-        self, differential_expression_data: tuple
-    ) -> None:
+    def test_topFC_selects_by_fold_change(self, differential_expression_data: tuple) -> None:
         """Test that topFC selects features by fold-change magnitude."""
         X, y = differential_expression_data
 
@@ -249,9 +240,7 @@ class TestFoldChangeSelector:
 
         # Should be sorted by absolute value (descending)
         abs_fc = fold_changes.abs()
-        assert abs_fc.is_monotonic_decreasing or (
-            abs_fc.iloc[0] >= abs_fc.iloc[-1]
-        )
+        assert abs_fc.is_monotonic_decreasing or (abs_fc.iloc[0] >= abs_fc.iloc[-1])
 
 
 class TestFoldChangeSignificanceSelector:
@@ -264,9 +253,7 @@ class TestFoldChangeSignificanceSelector:
         X, y = differential_expression_data
 
         # Use SignificanceSelector with fc_threshold
-        selector = SignificanceSelector(
-            method="sig", alpha=0.05, fc_threshold=1.0
-        )
+        selector = SignificanceSelector(method="sig", alpha=0.05, fc_threshold=1.0)
         selector.fit(X, y)
 
         # Should select features that are both:

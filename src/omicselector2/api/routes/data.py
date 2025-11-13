@@ -146,6 +146,7 @@ else:
             file_content = await file.read()
             # Wrap bytes in BytesIO for upload_fileobj
             import io
+
             file_obj = io.BytesIO(file_content)
             s3_path = storage_client.upload_file(
                 file_obj=file_obj,
@@ -371,8 +372,7 @@ else:
             except Exception as e:
                 # Log error but continue with database deletion
                 logger.error(
-                    f"Failed to delete S3 file for dataset {dataset.id}: {str(e)}",
-                    exc_info=True
+                    f"Failed to delete S3 file for dataset {dataset.id}: {str(e)}", exc_info=True
                 )
 
         # Delete database record

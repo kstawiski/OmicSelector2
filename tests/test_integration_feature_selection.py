@@ -29,7 +29,7 @@ def test_dataset():
         n_redundant=10,
         n_classes=2,
         random_state=42,
-        shuffle=False
+        shuffle=False,
     )
 
     feature_names = [f"GENE_{i}" for i in range(X.shape[1])]
@@ -46,25 +46,21 @@ class TestSingleMethodMode:
         """Test basic Lasso feature selection."""
         X, y = test_dataset
 
-        selected, metrics = run_lasso_feature_selection(
-            X, y, cv=3, n_features=15
-        )
+        selected, metrics = run_lasso_feature_selection(X, y, cv=3, n_features=15)
 
         assert isinstance(selected, list)
         assert isinstance(metrics, dict)
-        assert 'method' in metrics
-        assert metrics['method'] == 'lasso'
+        assert "method" in metrics
+        assert metrics["method"] == "lasso"
 
     def test_rf_single_method(self, test_dataset):
         """Test Random Forest feature selection."""
         X, y = test_dataset
 
-        selected, metrics = run_randomforest_feature_selection(
-            X, y, cv=3, n_features=15
-        )
+        selected, metrics = run_randomforest_feature_selection(X, y, cv=3, n_features=15)
 
         assert len(selected) > 0
-        assert metrics['method'] == 'random_forest'
+        assert metrics["method"] == "random_forest"
 
 
 class TestStabilityMode:
@@ -81,12 +77,10 @@ class TestStabilityMode:
             n_bootstraps=10,  # Use small number for speed
             threshold=0.5,
             sample_fraction=0.8,
-            random_state=42
+            random_state=42,
         )
 
-        stable_features, scores = selector.select_stable_features(
-            X, y, n_features=15, cv=3
-        )
+        stable_features, scores = selector.select_stable_features(X, y, n_features=15, cv=3)
 
         # Should select features that appear consistently
         assert isinstance(stable_features, list)
@@ -107,12 +101,10 @@ class TestStabilityMode:
             base_selector=run_randomforest_feature_selection,
             n_bootstraps=10,
             threshold=0.6,
-            random_state=42
+            random_state=42,
         )
 
-        stable_features, scores = selector.select_stable_features(
-            X, y, n_features=15, cv=3
-        )
+        stable_features, scores = selector.select_stable_features(X, y, n_features=15, cv=3)
 
         assert len(stable_features) > 0
         # All selected features should exceed threshold
@@ -129,14 +121,14 @@ class TestStabilityMode:
             base_selector=run_randomforest_feature_selection,
             n_bootstraps=10,
             threshold=0.5,
-            random_state=42
+            random_state=42,
         )
 
         selector2 = StabilitySelector(
             base_selector=run_randomforest_feature_selection,
             n_bootstraps=10,
             threshold=0.5,
-            random_state=42
+            random_state=42,
         )
 
         features1, _ = selector1.select_stable_features(X, y, n_features=15, cv=3)
@@ -160,15 +152,15 @@ class TestEnsembleMode:
                 run_randomforest_feature_selection,
                 run_mrmr_feature_selection,
             ],
-            ensemble_method='majority_vote',
-            min_votes=2
+            ensemble_method="majority_vote",
+            min_votes=2,
         )
 
         selected, metrics = selector.select_features(X, y, n_features=15, cv=3)
 
         assert len(selected) > 0
-        assert metrics['ensemble_method'] == 'majority_vote'
-        assert metrics['n_methods'] >= 2
+        assert metrics["ensemble_method"] == "majority_vote"
+        assert metrics["n_methods"] >= 2
 
     def test_ensemble_consensus_ranking(self, test_dataset):
         """Test ensemble with consensus ranking."""
@@ -181,15 +173,15 @@ class TestEnsembleMode:
                 run_randomforest_feature_selection,
                 run_mrmr_feature_selection,
             ],
-            ensemble_method='consensus_ranking',
-            n_features=10
+            ensemble_method="consensus_ranking",
+            n_features=10,
         )
 
         selected, metrics = selector.select_features(X, y, n_features=20, cv=3)
 
         # Should respect final n_features limit
         assert len(selected) <= 10
-        assert metrics['ensemble_method'] == 'consensus_ranking'
+        assert metrics["ensemble_method"] == "consensus_ranking"
 
     def test_ensemble_intersection(self, test_dataset):
         """Test ensemble with intersection strategy."""
@@ -202,14 +194,14 @@ class TestEnsembleMode:
                 run_randomforest_feature_selection,
                 run_mrmr_feature_selection,
             ],
-            ensemble_method='intersection'
+            ensemble_method="intersection",
         )
 
         selected, metrics = selector.select_features(X, y, n_features=15, cv=3)
 
         # Intersection may result in fewer or no features
         assert isinstance(selected, list)
-        assert metrics['ensemble_method'] == 'intersection'
+        assert metrics["ensemble_method"] == "intersection"
 
 
 class TestIntegrationScenarios:
@@ -220,9 +212,7 @@ class TestIntegrationScenarios:
         X, y = test_dataset
 
         # First: Run single method
-        lasso_features, lasso_metrics = run_lasso_feature_selection(
-            X, y, cv=3, n_features=20
-        )
+        lasso_features, lasso_metrics = run_lasso_feature_selection(X, y, cv=3, n_features=20)
 
         # Then: Validate with stability
         from omicselector2.features.stability import StabilitySelector
@@ -231,7 +221,7 @@ class TestIntegrationScenarios:
             base_selector=run_lasso_feature_selection,
             n_bootstraps=10,
             threshold=0.6,
-            random_state=42
+            random_state=42,
         )
 
         stable_features, scores = stability_selector.select_stable_features(
@@ -255,8 +245,8 @@ class TestIntegrationScenarios:
                 run_randomforest_feature_selection,
                 run_mrmr_feature_selection,
             ],
-            ensemble_method='consensus_ranking',
-            n_features=15
+            ensemble_method="consensus_ranking",
+            n_features=15,
         )
 
         ensemble_features, ensemble_metrics = ensemble_selector.select_features(
@@ -279,46 +269,35 @@ class TestIntegrationScenarios:
         # Simulate different config scenarios
         configs = [
             # Single method
-            {
-                'methods': ['lasso'],
-                'n_features': 15,
-                'cv_folds': 3
-            },
+            {"methods": ["lasso"], "n_features": 15, "cv_folds": 3},
             # Stability mode
             {
-                'methods': ['random_forest'],
-                'n_features': 15,
-                'cv_folds': 3,
-                'stability': {
-                    'n_bootstraps': 10,
-                    'threshold': 0.6,
-                    'sample_fraction': 0.8
-                }
+                "methods": ["random_forest"],
+                "n_features": 15,
+                "cv_folds": 3,
+                "stability": {"n_bootstraps": 10, "threshold": 0.6, "sample_fraction": 0.8},
             },
             # Ensemble mode
             {
-                'methods': ['lasso', 'random_forest', 'mrmr'],
-                'n_features': 15,
-                'cv_folds': 3,
-                'ensemble': {
-                    'method': 'majority_vote',
-                    'min_votes': 2
-                }
-            }
+                "methods": ["lasso", "random_forest", "mrmr"],
+                "n_features": 15,
+                "cv_folds": 3,
+                "ensemble": {"method": "majority_vote", "min_votes": 2},
+            },
         ]
 
         for config in configs:
             # Simulate what Celery task would do
-            methods = config.get('methods', ['lasso'])
-            n_features = config.get('n_features', 100)
-            cv_folds = config.get('cv_folds', 5)
-            stability_config = config.get('stability', None)
-            ensemble_config = config.get('ensemble', None)
+            methods = config.get("methods", ["lasso"])
+            n_features = config.get("n_features", 100)
+            cv_folds = config.get("cv_folds", 5)
+            stability_config = config.get("stability", None)
+            ensemble_config = config.get("ensemble", None)
 
             method_functions = {
-                'lasso': run_lasso_feature_selection,
-                'random_forest': run_randomforest_feature_selection,
-                'mrmr': run_mrmr_feature_selection,
+                "lasso": run_lasso_feature_selection,
+                "random_forest": run_randomforest_feature_selection,
+                "mrmr": run_mrmr_feature_selection,
             }
 
             if ensemble_config and len(methods) > 1:
@@ -328,8 +307,8 @@ class TestIntegrationScenarios:
                 selector_funcs = [method_functions[m] for m in methods if m in method_functions]
                 ensemble_selector = EnsembleFeatureSelector(
                     base_selectors=selector_funcs,
-                    ensemble_method=ensemble_config['method'],
-                    min_votes=ensemble_config.get('min_votes', 2)
+                    ensemble_method=ensemble_config["method"],
+                    min_votes=ensemble_config.get("min_votes", 2),
                 )
                 selected, metrics = ensemble_selector.select_features(X, y, n_features, cv_folds)
 
@@ -341,12 +320,14 @@ class TestIntegrationScenarios:
                 method_func = method_functions[method_name]
                 stability_selector = StabilitySelector(
                     base_selector=method_func,
-                    n_bootstraps=stability_config['n_bootstraps'],
-                    threshold=stability_config['threshold'],
-                    random_state=42
+                    n_bootstraps=stability_config["n_bootstraps"],
+                    threshold=stability_config["threshold"],
+                    random_state=42,
                 )
-                selected, scores = stability_selector.select_stable_features(X, y, n_features, cv_folds)
-                metrics = {'stability_scores': scores}
+                selected, scores = stability_selector.select_stable_features(
+                    X, y, n_features, cv_folds
+                )
+                metrics = {"stability_scores": scores}
 
             else:
                 # Single method mode

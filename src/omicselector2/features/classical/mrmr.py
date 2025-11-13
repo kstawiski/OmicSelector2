@@ -156,9 +156,7 @@ class mRMRSelector(BaseFeatureSelector):
                 break
 
             # Calculate mRMR scores for remaining features
-            mrmr_scores = self._calculate_mrmr_scores(
-                X, selected_indices, remaining_indices
-            )
+            mrmr_scores = self._calculate_mrmr_scores(X, selected_indices, remaining_indices)
 
             # Select feature with highest mRMR score
             best_idx_in_remaining = int(np.argmax(mrmr_scores))
@@ -223,9 +221,7 @@ class mRMRSelector(BaseFeatureSelector):
 
         return np.array(mrmr_scores)
 
-    def _compute_mutual_information(
-        self, X: NDArray, y: NDArray
-    ) -> float:
+    def _compute_mutual_information(self, X: NDArray, y: NDArray) -> float:
         """Compute mutual information between two variables.
 
         Args:

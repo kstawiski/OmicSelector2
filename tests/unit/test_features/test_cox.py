@@ -52,10 +52,7 @@ def sample_survival_data() -> tuple[pd.DataFrame, pd.DataFrame]:
     # Censoring (some patients lost to follow-up)
     event = np.random.binomial(1, 0.7, n_samples)  # 70% observed events
 
-    y_survival = pd.DataFrame({
-        "time": time,
-        "event": event
-    })
+    y_survival = pd.DataFrame({"time": time, "event": event})
 
     return X, y_survival
 
@@ -100,9 +97,7 @@ class TestCoxSelector:
         assert X_transformed.shape[1] == 20
         assert all(col in X.columns for col in X_transformed.columns)
 
-    def test_fit_transform(
-        self, sample_survival_data: tuple[pd.DataFrame, pd.DataFrame]
-    ) -> None:
+    def test_fit_transform(self, sample_survival_data: tuple[pd.DataFrame, pd.DataFrame]) -> None:
         """Test fit_transform performs fit and transform in one call."""
         X, y_survival = sample_survival_data
         selector = CoxSelector(n_features_to_select=15)
@@ -113,9 +108,7 @@ class TestCoxSelector:
         assert X_transformed.shape[1] == 15
         assert hasattr(selector, "selected_features_")
 
-    def test_get_support(
-        self, sample_survival_data: tuple[pd.DataFrame, pd.DataFrame]
-    ) -> None:
+    def test_get_support(self, sample_survival_data: tuple[pd.DataFrame, pd.DataFrame]) -> None:
         """Test get_support returns boolean mask."""
         X, y_survival = sample_survival_data
         selector = CoxSelector(n_features_to_select=25)
@@ -142,9 +135,7 @@ class TestCoxSelector:
         assert indices.dtype == np.int64 or indices.dtype == np.intp
         assert len(indices) == 30
 
-    def test_l1_penalty(
-        self, sample_survival_data: tuple[pd.DataFrame, pd.DataFrame]
-    ) -> None:
+    def test_l1_penalty(self, sample_survival_data: tuple[pd.DataFrame, pd.DataFrame]) -> None:
         """Test Cox with L1 (Lasso) penalty for sparse selection."""
         X, y_survival = sample_survival_data
         selector = CoxSelector(penalty="l1", penalizer=0.1, n_features_to_select=20)
@@ -154,9 +145,7 @@ class TestCoxSelector:
         assert selector.penalty == "l1"
         assert len(selector.selected_features_) == 20
 
-    def test_l2_penalty(
-        self, sample_survival_data: tuple[pd.DataFrame, pd.DataFrame]
-    ) -> None:
+    def test_l2_penalty(self, sample_survival_data: tuple[pd.DataFrame, pd.DataFrame]) -> None:
         """Test Cox with L2 (Ridge) penalty."""
         X, y_survival = sample_survival_data
         selector = CoxSelector(penalty="l2", penalizer=0.1, n_features_to_select=20)
@@ -189,9 +178,7 @@ class TestCoxSelector:
         with pytest.raises(ValueError, match="penalty must be None, 'l1', or 'l2'"):
             CoxSelector(penalty="invalid")
 
-    def test_get_result(
-        self, sample_survival_data: tuple[pd.DataFrame, pd.DataFrame]
-    ) -> None:
+    def test_get_result(self, sample_survival_data: tuple[pd.DataFrame, pd.DataFrame]) -> None:
         """Test get_result returns FeatureSelectorResult."""
         X, y_survival = sample_survival_data
         selector = CoxSelector(n_features_to_select=20)
@@ -205,8 +192,10 @@ class TestCoxSelector:
         assert result.n_features_selected == 20
         assert result.method_name == "CoxSelector"
         # Scores should be sorted (descending)
-        assert all(result.feature_scores[i] >= result.feature_scores[i + 1]
-                   for i in range(len(result.feature_scores) - 1))
+        assert all(
+            result.feature_scores[i] >= result.feature_scores[i + 1]
+            for i in range(len(result.feature_scores) - 1)
+        )
 
     def test_requires_time_and_event_columns(
         self, sample_survival_data: tuple[pd.DataFrame, pd.DataFrame]

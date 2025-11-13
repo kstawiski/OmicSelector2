@@ -73,9 +73,7 @@ class TestL1SVMSelector:
         assert selector.C == 1.0
         assert selector.penalty == "l1"
 
-    def test_fit_binary(
-        self, sample_binary_classification: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_fit_binary(self, sample_binary_classification: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test fit method for binary classification."""
         X, y = sample_binary_classification
         selector = L1SVMSelector(C=0.1, n_features_to_select=20)
@@ -100,9 +98,7 @@ class TestL1SVMSelector:
         assert result is selector
         assert len(selector.selected_features_) == 25
 
-    def test_transform(
-        self, sample_binary_classification: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_transform(self, sample_binary_classification: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test transform returns DataFrame with selected features."""
         X, y = sample_binary_classification
         selector = L1SVMSelector(C=0.1, n_features_to_select=30)
@@ -196,9 +192,7 @@ class TestL1SVMSelector:
         with pytest.raises(ValueError, match="C must be positive"):
             L1SVMSelector(C=-1.0)
 
-    def test_get_result(
-        self, sample_binary_classification: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_get_result(self, sample_binary_classification: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test get_result returns FeatureSelectorResult."""
         X, y = sample_binary_classification
         selector = L1SVMSelector(C=0.1, n_features_to_select=30)
@@ -212,8 +206,10 @@ class TestL1SVMSelector:
         assert result.n_features_selected == 30
         assert result.method_name == "L1SVMSelector"
         # Scores should be sorted (descending)
-        assert all(result.feature_scores[i] >= result.feature_scores[i + 1]
-                   for i in range(len(result.feature_scores) - 1))
+        assert all(
+            result.feature_scores[i] >= result.feature_scores[i + 1]
+            for i in range(len(result.feature_scores) - 1)
+        )
 
     def test_reproducibility(
         self, sample_binary_classification: tuple[pd.DataFrame, pd.Series]

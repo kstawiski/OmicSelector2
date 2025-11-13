@@ -40,16 +40,21 @@ def sample_correlated_data() -> tuple[pd.DataFrame, pd.Series]:
     base3 = np.random.randn(n_samples)
 
     # Create correlated features
-    X = pd.DataFrame({
-        "feature_0": base1,
-        "feature_1": base1 + np.random.randn(n_samples) * 0.1,  # High correlation with feature_0
-        "feature_2": base1 + np.random.randn(n_samples) * 0.05,  # Very high correlation with feature_0
-        "feature_3": base2,
-        "feature_4": base2 + np.random.randn(n_samples) * 0.1,  # High correlation with feature_3
-        "feature_5": base3,
-        "feature_6": np.random.randn(n_samples),  # Independent
-        "feature_7": np.random.randn(n_samples),  # Independent
-    })
+    X = pd.DataFrame(
+        {
+            "feature_0": base1,
+            "feature_1": base1
+            + np.random.randn(n_samples) * 0.1,  # High correlation with feature_0
+            "feature_2": base1
+            + np.random.randn(n_samples) * 0.05,  # Very high correlation with feature_0
+            "feature_3": base2,
+            "feature_4": base2
+            + np.random.randn(n_samples) * 0.1,  # High correlation with feature_3
+            "feature_5": base3,
+            "feature_6": np.random.randn(n_samples),  # Independent
+            "feature_7": np.random.randn(n_samples),  # Independent
+        }
+    )
 
     # Binary target
     y = pd.Series(np.random.binomial(1, 0.5, n_samples))
@@ -104,9 +109,7 @@ class TestCorrelationFilter:
         assert len(selector.selected_features_) > 0
         assert hasattr(selector, "correlation_matrix_")
 
-    def test_fit_with_kendall(
-        self, sample_correlated_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_fit_with_kendall(self, sample_correlated_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test with Kendall correlation."""
         X, y = sample_correlated_data
 
@@ -115,9 +118,7 @@ class TestCorrelationFilter:
 
         assert len(selector.selected_features_) > 0
 
-    def test_transform(
-        self, sample_correlated_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_transform(self, sample_correlated_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test transform method."""
         X, y = sample_correlated_data
 
@@ -131,9 +132,7 @@ class TestCorrelationFilter:
         assert X_transformed.shape[1] == len(selector.selected_features_)
         assert list(X_transformed.columns) == selector.selected_features_
 
-    def test_fit_transform(
-        self, sample_correlated_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_fit_transform(self, sample_correlated_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test fit_transform method."""
         X, y = sample_correlated_data
 
@@ -142,9 +141,7 @@ class TestCorrelationFilter:
 
         assert X_transformed.shape[1] < X.shape[1]
 
-    def test_get_support(
-        self, sample_correlated_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_get_support(self, sample_correlated_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test get_support method."""
         X, y = sample_correlated_data
 
@@ -224,9 +221,7 @@ class TestCorrelationFilter:
         # Higher threshold should keep more features (less strict)
         assert len(selector_high.selected_features_) >= len(selector_low.selected_features_)
 
-    def test_get_result(
-        self, sample_correlated_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_get_result(self, sample_correlated_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test get_result returns metadata."""
         X, y = sample_correlated_data
 
@@ -241,9 +236,7 @@ class TestCorrelationFilter:
         assert "threshold" in result.metadata
         assert "removed_features" in result.metadata
 
-    def test_reproducibility(
-        self, sample_correlated_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_reproducibility(self, sample_correlated_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test that correlation filter is deterministic."""
         X, y = sample_correlated_data
 

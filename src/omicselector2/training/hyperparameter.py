@@ -186,9 +186,7 @@ class HyperparameterOptimizer:
             {'n_estimators': 250, 'max_depth': 15, ...}
         """
         if self.study_ is None:
-            raise RuntimeError(
-                "optimize() must be called first before accessing best parameters"
-            )
+            raise RuntimeError("optimize() must be called first before accessing best parameters")
 
         return self.study_.best_params
 
@@ -287,9 +285,7 @@ class HyperparameterOptimizer:
                 elif len(param_spec) == 3 and param_spec[2] == "log":
                     # Float parameter with log scale
                     low, high, _ = param_spec
-                    params[param_name] = trial.suggest_float(
-                        param_name, low, high, log=True
-                    )
+                    params[param_name] = trial.suggest_float(param_name, low, high, log=True)
                 else:
                     # Float parameter with linear scale
                     low, high = param_spec[:2]

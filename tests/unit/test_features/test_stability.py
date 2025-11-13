@@ -70,11 +70,7 @@ class TestStabilitySelector:
         """Test fit method executes without error."""
         X, y = sample_classification_data
         base_selector = LassoSelector(n_features_to_select=15)
-        selector = StabilitySelector(
-            base_selector=base_selector,
-            n_bootstraps=10,
-            threshold=0.5
-        )
+        selector = StabilitySelector(base_selector=base_selector, n_bootstraps=10, threshold=0.5)
 
         result = selector.fit(X, y)
 
@@ -89,11 +85,7 @@ class TestStabilitySelector:
         """Test that stability scores are calculated correctly."""
         X, y = sample_classification_data
         base_selector = LassoSelector(n_features_to_select=10)
-        selector = StabilitySelector(
-            base_selector=base_selector,
-            n_bootstraps=20,
-            threshold=0.3
-        )
+        selector = StabilitySelector(base_selector=base_selector, n_bootstraps=20, threshold=0.3)
         selector.fit(X, y)
 
         # Stability scores should be between 0 and 1
@@ -112,34 +104,24 @@ class TestStabilitySelector:
 
         # Low threshold = more features
         selector_low = StabilitySelector(
-            base_selector=base_selector,
-            n_bootstraps=20,
-            threshold=0.2
+            base_selector=base_selector, n_bootstraps=20, threshold=0.2
         )
         selector_low.fit(X, y)
 
         # High threshold = fewer features
         selector_high = StabilitySelector(
-            base_selector=base_selector,
-            n_bootstraps=20,
-            threshold=0.8
+            base_selector=base_selector, n_bootstraps=20, threshold=0.8
         )
         selector_high.fit(X, y)
 
         # Higher threshold should select fewer or equal features
         assert len(selector_high.selected_features_) <= len(selector_low.selected_features_)
 
-    def test_transform(
-        self, sample_classification_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_transform(self, sample_classification_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test transform returns DataFrame with stable features."""
         X, y = sample_classification_data
         base_selector = LassoSelector(n_features_to_select=20)
-        selector = StabilitySelector(
-            base_selector=base_selector,
-            n_bootstraps=10,
-            threshold=0.4
-        )
+        selector = StabilitySelector(base_selector=base_selector, n_bootstraps=10, threshold=0.4)
         selector.fit(X, y)
 
         X_transformed = selector.transform(X)
@@ -155,26 +137,18 @@ class TestStabilitySelector:
         """Test fit_transform performs fit and transform in one call."""
         X, y = sample_classification_data
         base_selector = RandomForestSelector(n_features_to_select=15)
-        selector = StabilitySelector(
-            base_selector=base_selector,
-            n_bootstraps=10
-        )
+        selector = StabilitySelector(base_selector=base_selector, n_bootstraps=10)
 
         X_transformed = selector.fit_transform(X, y)
 
         assert isinstance(X_transformed, pd.DataFrame)
         assert hasattr(selector, "selected_features_")
 
-    def test_get_support(
-        self, sample_classification_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_get_support(self, sample_classification_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test get_support returns boolean mask."""
         X, y = sample_classification_data
         base_selector = LassoSelector(n_features_to_select=20)
-        selector = StabilitySelector(
-            base_selector=base_selector,
-            n_bootstraps=10
-        )
+        selector = StabilitySelector(base_selector=base_selector, n_bootstraps=10)
         selector.fit(X, y)
 
         support = selector.get_support(indices=False)
@@ -190,10 +164,7 @@ class TestStabilitySelector:
         """Test get_support with indices=True."""
         X, y = sample_classification_data
         base_selector = LassoSelector(n_features_to_select=20)
-        selector = StabilitySelector(
-            base_selector=base_selector,
-            n_bootstraps=10
-        )
+        selector = StabilitySelector(base_selector=base_selector, n_bootstraps=10)
         selector.fit(X, y)
 
         indices = selector.get_support(indices=True)
@@ -212,7 +183,7 @@ class TestStabilitySelector:
         lasso_selector = StabilitySelector(
             base_selector=LassoSelector(n_features_to_select=10),
             n_bootstraps=10,
-            threshold=0.4  # Lower threshold for only 10 bootstraps
+            threshold=0.4,  # Lower threshold for only 10 bootstraps
         )
         lasso_selector.fit(X, y)
         assert len(lasso_selector.selected_features_) > 0
@@ -221,7 +192,7 @@ class TestStabilitySelector:
         rf_selector = StabilitySelector(
             base_selector=RandomForestSelector(n_features_to_select=10),
             n_bootstraps=10,
-            threshold=0.4  # Lower threshold for only 10 bootstraps
+            threshold=0.4,  # Lower threshold for only 10 bootstraps
         )
         rf_selector.fit(X, y)
         assert len(rf_selector.selected_features_) > 0
@@ -233,20 +204,14 @@ class TestStabilitySelector:
         X, y = sample_classification_data
         base_selector = LassoSelector(n_features_to_select=15, random_state=42)
 
-        selector1 = StabilitySelector(
-            base_selector=base_selector,
-            n_bootstraps=10,
-            random_state=42
-        )
+        selector1 = StabilitySelector(base_selector=base_selector, n_bootstraps=10, random_state=42)
         selector1.fit(X, y)
         features1 = selector1.selected_features_
 
         # Reset base selector
         base_selector2 = LassoSelector(n_features_to_select=15, random_state=42)
         selector2 = StabilitySelector(
-            base_selector=base_selector2,
-            n_bootstraps=10,
-            random_state=42
+            base_selector=base_selector2, n_bootstraps=10, random_state=42
         )
         selector2.fit(X, y)
         features2 = selector2.selected_features_
@@ -263,9 +228,7 @@ class TestStabilitySelector:
         # Different sample fractions
         for fraction in [0.5, 0.7, 0.9]:
             selector = StabilitySelector(
-                base_selector=base_selector,
-                n_bootstraps=5,
-                sample_fraction=fraction
+                base_selector=base_selector, n_bootstraps=5, sample_fraction=fraction
             )
             selector.fit(X, y)
             assert len(selector.selected_features_) >= 0
@@ -287,16 +250,11 @@ class TestStabilitySelector:
         with pytest.raises(ValueError, match="sample_fraction must be between 0 and 1"):
             StabilitySelector(base_selector=base_selector, sample_fraction=1.5)
 
-    def test_get_result(
-        self, sample_classification_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_get_result(self, sample_classification_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test get_result returns result with stability metadata."""
         X, y = sample_classification_data
         base_selector = LassoSelector(n_features_to_select=15)
-        selector = StabilitySelector(
-            base_selector=base_selector,
-            n_bootstraps=10
-        )
+        selector = StabilitySelector(base_selector=base_selector, n_bootstraps=10)
         selector.fit(X, y)
 
         result = selector.get_result()

@@ -17,8 +17,7 @@ def sample_data() -> tuple[pd.DataFrame, pd.Series]:
     n_features = 50
 
     X = pd.DataFrame(
-        np.random.randn(n_samples, n_features),
-        columns=[f"feature_{i}" for i in range(n_features)]
+        np.random.randn(n_samples, n_features), columns=[f"feature_{i}" for i in range(n_features)]
     )
     y = pd.Series(np.random.binomial(1, 0.5, n_samples), name="target")
 
@@ -48,11 +47,11 @@ def test_base_selector_has_required_methods() -> None:
     from omicselector2.features.base import BaseFeatureSelector
 
     # Check abstract methods exist
-    assert hasattr(BaseFeatureSelector, 'fit')
-    assert hasattr(BaseFeatureSelector, 'transform')
-    assert hasattr(BaseFeatureSelector, 'fit_transform')
-    assert hasattr(BaseFeatureSelector, 'get_support')
-    assert hasattr(BaseFeatureSelector, 'get_feature_names_out')
+    assert hasattr(BaseFeatureSelector, "fit")
+    assert hasattr(BaseFeatureSelector, "transform")
+    assert hasattr(BaseFeatureSelector, "fit_transform")
+    assert hasattr(BaseFeatureSelector, "get_support")
+    assert hasattr(BaseFeatureSelector, "get_feature_names_out")
 
 
 @pytest.mark.unit
@@ -61,7 +60,7 @@ def test_base_selector_has_common_attributes() -> None:
     from omicselector2.features.base import BaseFeatureSelector
 
     # These should be class-level attributes or defined in __init__
-    assert hasattr(BaseFeatureSelector, '__abstractmethods__')
+    assert hasattr(BaseFeatureSelector, "__abstractmethods__")
 
 
 @pytest.mark.unit
@@ -75,7 +74,7 @@ def test_feature_selector_result_dataclass() -> None:
         feature_scores=np.array([0.9, 0.8, 0.7]),
         support_mask=np.array([True, True, True, False, False]),
         n_features_selected=3,
-        method_name="test_method"
+        method_name="test_method",
     )
 
     assert len(result.selected_features) == 3
@@ -95,7 +94,7 @@ def test_feature_selector_result_to_dataframe() -> None:
         feature_scores=np.array([0.9, 0.8]),
         support_mask=np.array([True, True, False]),
         n_features_selected=2,
-        method_name="test"
+        method_name="test",
     )
 
     df = result.to_dataframe()

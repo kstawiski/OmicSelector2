@@ -92,9 +92,7 @@ class TestKFoldSplitter:
         assert splitter.shuffle is True  # Default
         assert splitter.random_state is None
 
-    def test_split(
-        self, sample_classification_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_split(self, sample_classification_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test basic k-fold splitting."""
         X, y = sample_classification_data
 
@@ -272,9 +270,7 @@ class TestTrainTestValSplitter:
         """Test train/test/validation splitting."""
         X, y = sample_classification_data
 
-        splitter = TrainTestValSplitter(
-            test_size=0.2, val_size=0.2, random_state=42
-        )
+        splitter = TrainTestValSplitter(test_size=0.2, val_size=0.2, random_state=42)
         train_idx, test_idx, val_idx = splitter.split(X, y)
 
         # Check sizes
@@ -312,9 +308,7 @@ class TestTrainTestValSplitter:
         """Test stratified train/test/val splitting."""
         X, y = sample_classification_data
 
-        splitter = TrainTestValSplitter(
-            test_size=0.2, val_size=0.2, stratify=True, random_state=42
-        )
+        splitter = TrainTestValSplitter(test_size=0.2, val_size=0.2, stratify=True, random_state=42)
         train_idx, test_idx, val_idx = splitter.split(X, y)
 
         # Check class distributions
@@ -336,14 +330,10 @@ class TestTrainTestValSplitter:
         """Test reproducibility with random_state."""
         X, y = sample_classification_data
 
-        splitter1 = TrainTestValSplitter(
-            test_size=0.2, val_size=0.2, random_state=42
-        )
+        splitter1 = TrainTestValSplitter(test_size=0.2, val_size=0.2, random_state=42)
         train1, test1, val1 = splitter1.split(X, y)
 
-        splitter2 = TrainTestValSplitter(
-            test_size=0.2, val_size=0.2, random_state=42
-        )
+        splitter2 = TrainTestValSplitter(test_size=0.2, val_size=0.2, random_state=42)
         train2, test2, val2 = splitter2.split(X, y)
 
         np.testing.assert_array_equal(train1, train2)
@@ -358,9 +348,7 @@ class TestTrainTestValSplitter:
         with pytest.raises(ValueError, match="val_size.*must be between 0 and 1"):
             TrainTestValSplitter(test_size=0.2, val_size=1.5)
 
-        with pytest.raises(
-            ValueError, match="test_size.*val_size.*must sum to less than 1"
-        ):
+        with pytest.raises(ValueError, match="test_size.*val_size.*must sum to less than 1"):
             TrainTestValSplitter(test_size=0.6, val_size=0.6)
 
 
@@ -373,9 +361,7 @@ class TestCrossValidator:
 
         assert CrossValidator is not None
 
-    def test_kfold_cv(
-        self, sample_classification_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_kfold_cv(self, sample_classification_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test k-fold cross-validation."""
         X, y = sample_classification_data
 

@@ -67,7 +67,9 @@ def test_dataset(test_user):
 class TestCreateJob:
     """Test job creation endpoint."""
 
-    def test_create_feature_selection_job_success(self, test_client, mock_db, test_user, test_dataset):
+    def test_create_feature_selection_job_success(
+        self, test_client, mock_db, test_user, test_dataset
+    ):
         """Test successful feature selection job creation."""
         # This test will fail until we implement the endpoint
 
@@ -96,7 +98,7 @@ class TestCreateJob:
         mock_db.refresh = mock_refresh
 
         # Mock Celery task
-        with patch('omicselector2.api.routes.jobs.feature_selection_task') as mock_task:
+        with patch("omicselector2.api.routes.jobs.feature_selection_task") as mock_task:
             mock_task.delay.return_value.id = "celery-task-id-123"
 
             response = test_client.post(
@@ -107,9 +109,9 @@ class TestCreateJob:
                     "config": {
                         "methods": ["lasso", "elastic_net"],
                         "n_features": 100,
-                        "cv_folds": 5
-                    }
-                }
+                        "cv_folds": 5,
+                    },
+                },
             )
 
         app.dependency_overrides.clear()
@@ -134,11 +136,7 @@ class TestCreateJob:
 
         response = test_client.post(
             "/api/v1/jobs/",
-            json={
-                "job_type": "invalid_type",
-                "dataset_id": str(uuid4()),
-                "config": {}
-            }
+            json={"job_type": "invalid_type", "dataset_id": str(uuid4()), "config": {}},
         )
 
         app.dependency_overrides.clear()
@@ -162,11 +160,7 @@ class TestCreateJob:
 
         response = test_client.post(
             "/api/v1/jobs/",
-            json={
-                "job_type": "feature_selection",
-                "dataset_id": str(uuid4()),
-                "config": {}
-            }
+            json={"job_type": "feature_selection", "dataset_id": str(uuid4()), "config": {}},
         )
 
         app.dependency_overrides.clear()
@@ -194,11 +188,7 @@ class TestCreateJob:
 
         response = test_client.post(
             "/api/v1/jobs/",
-            json={
-                "job_type": "feature_selection",
-                "dataset_id": str(dataset.id),
-                "config": {}
-            }
+            json={"job_type": "feature_selection", "dataset_id": str(dataset.id), "config": {}},
         )
 
         app.dependency_overrides.clear()
@@ -210,11 +200,7 @@ class TestCreateJob:
 
         response = test_client.post(
             "/api/v1/jobs/",
-            json={
-                "job_type": "feature_selection",
-                "dataset_id": str(uuid4()),
-                "config": {}
-            }
+            json={"job_type": "feature_selection", "dataset_id": str(uuid4()), "config": {}},
         )
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -466,7 +452,7 @@ class TestCancelJob:
         app.dependency_overrides[get_current_user] = override_get_current_user
         app.dependency_overrides[lambda: None] = lambda: mock_db
 
-        with patch('omicselector2.api.routes.jobs.celery_app') as mock_celery:
+        with patch("omicselector2.api.routes.jobs.celery_app") as mock_celery:
             mock_celery.control.revoke = Mock()
 
             response = test_client.delete(f"/api/v1/jobs/{job_id}")
@@ -519,6 +505,7 @@ class TestGetJobResult:
         mock_job.result_id = result_id
 
         from omicselector2.db import Result
+
         mock_result = Mock(spec=Result)
         mock_result.id = result_id
         mock_result.job_id = job_id

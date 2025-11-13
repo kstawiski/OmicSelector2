@@ -77,8 +77,9 @@ def sample_regression_data() -> tuple[pd.DataFrame, pd.Series]:
     )
 
     weights = np.random.rand(n_informative) * 2
-    y = pd.Series((X.iloc[:, :n_informative] * weights).sum(axis=1) +
-                  np.random.randn(n_samples) * 0.5)
+    y = pd.Series(
+        (X.iloc[:, :n_informative] * weights).sum(axis=1) + np.random.randn(n_samples) * 0.5
+    )
 
     return X, y
 
@@ -126,9 +127,7 @@ class TestStatisticalSelector:
         assert len(selector.scores_) == 20
         assert len(selector.pvalues_) == 20
 
-    def test_fit_regression(
-        self, sample_regression_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_fit_regression(self, sample_regression_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test fit method on regression (uses F-test)."""
         X, y = sample_regression_data
         selector = StatisticalSelector(n_features_to_select=15, task="regression")
@@ -139,9 +138,7 @@ class TestStatisticalSelector:
         assert selector.task == "regression"
         assert len(selector.selected_features_) == 15
 
-    def test_transform(
-        self, sample_binary_classification: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_transform(self, sample_binary_classification: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test transform returns DataFrame with selected features."""
         X, y = sample_binary_classification
         selector = StatisticalSelector(n_features_to_select=20)
@@ -205,8 +202,9 @@ class TestStatisticalSelector:
         selector.fit(X, y)
 
         # Scores should be in descending order
-        assert all(selector.scores_[i] >= selector.scores_[i + 1]
-                   for i in range(len(selector.scores_) - 1))
+        assert all(
+            selector.scores_[i] >= selector.scores_[i + 1] for i in range(len(selector.scores_) - 1)
+        )
 
     def test_pvalues_available(
         self, sample_binary_classification: tuple[pd.DataFrame, pd.Series]
@@ -231,9 +229,7 @@ class TestStatisticalSelector:
         with pytest.raises(ValueError, match="task must be 'regression' or 'classification'"):
             StatisticalSelector(task="invalid")
 
-    def test_get_result(
-        self, sample_binary_classification: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_get_result(self, sample_binary_classification: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test get_result returns FeatureSelectorResult."""
         X, y = sample_binary_classification
         selector = StatisticalSelector(n_features_to_select=20)

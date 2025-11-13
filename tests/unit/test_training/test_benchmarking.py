@@ -286,9 +286,7 @@ class TestBenchmarker:
         )
 
         # Compare results (should implement paired t-test or similar)
-        comparison = benchmarker.compare_results(
-            results[0], results[1], metric="accuracy"
-        )
+        comparison = benchmarker.compare_results(results[0], results[1], metric="accuracy")
 
         assert "p_value" in comparison or "significant" in comparison
 

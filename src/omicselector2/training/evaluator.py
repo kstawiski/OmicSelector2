@@ -32,7 +32,7 @@ Examples:
     >>> print(f"F1 (macro): {metrics['f1_macro']:.3f}")
 """
 
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 import numpy as np
 from numpy.typing import NDArray
@@ -145,9 +145,7 @@ class ClassificationEvaluator:
 
         if multiclass:
             # Multiclass metrics
-            precision, recall, f1 = self._compute_multiclass_metrics(
-                y_true, y_pred_class, average
-            )
+            precision, recall, f1 = self._compute_multiclass_metrics(y_true, y_pred_class, average)
             metrics[f"precision_{average}"] = precision
             metrics[f"recall_{average}"] = recall
             metrics[f"f1_{average}"] = f1
@@ -159,9 +157,7 @@ class ClassificationEvaluator:
             metrics["f1"] = f1
 
         # Confusion matrix
-        metrics["confusion_matrix"] = self._compute_confusion_matrix(
-            y_true, y_pred_class
-        )
+        metrics["confusion_matrix"] = self._compute_confusion_matrix(y_true, y_pred_class)
 
         # Per-class metrics if requested
         if per_class:
@@ -192,11 +188,7 @@ class ClassificationEvaluator:
         recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
 
         # F1
-        f1 = (
-            2 * (precision * recall) / (precision + recall)
-            if (precision + recall) > 0
-            else 0.0
-        )
+        f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
 
         return float(precision), float(recall), float(f1)
 
@@ -205,7 +197,6 @@ class ClassificationEvaluator:
     ) -> tuple[float, float, float]:
         """Compute multiclass precision, recall, and F1."""
         classes = np.unique(np.concatenate([y_true, y_pred]))
-        n_classes = len(classes)
 
         # Compute per-class metrics
         precisions = []
@@ -219,9 +210,7 @@ class ClassificationEvaluator:
             y_pred_binary = (y_pred == cls).astype(int)
 
             # Compute binary metrics
-            precision, recall, f1 = self._compute_binary_metrics(
-                y_true_binary, y_pred_binary
-            )
+            precision, recall, f1 = self._compute_binary_metrics(y_true_binary, y_pred_binary)
 
             precisions.append(precision)
             recalls.append(recall)
@@ -280,9 +269,7 @@ class ClassificationEvaluator:
             y_true_binary = (y_true == cls).astype(int)
             y_pred_binary = (y_pred == cls).astype(int)
 
-            precision, recall, f1 = self._compute_binary_metrics(
-                y_true_binary, y_pred_binary
-            )
+            precision, recall, f1 = self._compute_binary_metrics(y_true_binary, y_pred_binary)
 
             precisions.append(precision)
             recalls.append(recall)
@@ -313,7 +300,6 @@ class ClassificationEvaluator:
         """Compute AUC-ROC for binary classification."""
         # Sort by predicted score (descending)
         desc_score_indices = np.argsort(y_score)[::-1]
-        y_score_sorted = y_score[desc_score_indices]
         y_true_sorted = y_true[desc_score_indices]
 
         # Compute TPR and FPR at each threshold
@@ -344,7 +330,6 @@ class ClassificationEvaluator:
         """Compute AUC-PR for binary classification."""
         # Sort by predicted score (descending)
         desc_score_indices = np.argsort(y_score)[::-1]
-        y_score_sorted = y_score[desc_score_indices]
         y_true_sorted = y_true[desc_score_indices]
 
         # Compute precision and recall at each threshold
@@ -377,9 +362,7 @@ class ClassificationEvaluator:
         n_classes = len(classes)
 
         if y_score.shape[1] != n_classes:
-            raise ValueError(
-                f"y_score must have {n_classes} columns for {n_classes} classes"
-            )
+            raise ValueError(f"y_score must have {n_classes} columns for {n_classes} classes")
 
         # Compute AUC for each class vs rest
         aucs = []
@@ -433,8 +416,7 @@ class RegressionEvaluator:
 
         if y_true.shape != y_pred.shape:
             raise ValueError(
-                f"shape mismatch: y_true shape {y_true.shape}, "
-                f"y_pred shape {y_pred.shape}"
+                f"shape mismatch: y_true shape {y_true.shape}, " f"y_pred shape {y_pred.shape}"
             )
 
         metrics: dict[str, Any] = {}

@@ -62,11 +62,8 @@ class FeatureSelectorResult:
             >>> df = result.to_dataframe()
             >>> print(df.head())
         """
-        df = pd.DataFrame({
-            'feature': self.selected_features,
-            'score': self.feature_scores
-        })
-        return df.sort_values('score', ascending=False).reset_index(drop=True)
+        df = pd.DataFrame({"feature": self.selected_features, "score": self.feature_scores})
+        return df.sort_values("score", ascending=False).reset_index(drop=True)
 
     def to_dict(self) -> dict:
         """Convert result to dictionary.
@@ -75,10 +72,10 @@ class FeatureSelectorResult:
             Dictionary representation of the result.
         """
         return {
-            'selected_features': self.selected_features,
-            'n_features_selected': self.n_features_selected,
-            'method_name': self.method_name,
-            'metadata': self.metadata or {}
+            "selected_features": self.selected_features,
+            "n_features_selected": self.n_features_selected,
+            "method_name": self.method_name,
+            "metadata": self.metadata or {},
         }
 
 
@@ -113,7 +110,7 @@ class BaseFeatureSelector(ABC):
         self,
         n_features_to_select: Optional[int] = None,
         random_state: Optional[int] = None,
-        verbose: bool = False
+        verbose: bool = False,
     ) -> None:
         """Initialize base feature selector.
 
@@ -239,14 +236,10 @@ class BaseFeatureSelector(ABC):
             feature_scores=self.feature_scores_,
             support_mask=self.support_mask_,
             n_features_selected=len(self.selected_features_),
-            method_name=self.__class__.__name__
+            method_name=self.__class__.__name__,
         )
 
-    def _validate_input(
-        self,
-        X: pd.DataFrame,
-        y: Optional[pd.Series] = None
-    ) -> None:
+    def _validate_input(self, X: pd.DataFrame, y: Optional[pd.Series] = None) -> None:
         """Validate input data.
 
         Args:
@@ -268,8 +261,7 @@ class BaseFeatureSelector(ABC):
 
         if y is not None and len(X) != len(y):
             raise ValueError(
-                f"X and y must have same number of samples. "
-                f"Got X: {len(X)}, y: {len(y)}"
+                f"X and y must have same number of samples. " f"Got X: {len(X)}, y: {len(y)}"
             )
 
         # Check for NaN values

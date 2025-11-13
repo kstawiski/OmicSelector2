@@ -95,9 +95,7 @@ class TestEarlyStopping:
 
     def test_early_stopping_custom_parameters(self) -> None:
         """Test EarlyStopping with custom parameters."""
-        callback = EarlyStopping(
-            monitor="val_accuracy", patience=5, min_delta=0.001, mode="max"
-        )
+        callback = EarlyStopping(monitor="val_accuracy", patience=5, min_delta=0.001, mode="max")
         assert callback.monitor == "val_accuracy"
         assert callback.patience == 5
         assert callback.min_delta == 0.001
@@ -160,9 +158,7 @@ class TestEarlyStopping:
 
     def test_early_stopping_respects_min_delta(self) -> None:
         """Test that early stopping considers min_delta for improvement."""
-        callback = EarlyStopping(
-            monitor="val_loss", patience=2, min_delta=0.01, mode="min"
-        )
+        callback = EarlyStopping(monitor="val_loss", patience=2, min_delta=0.01, mode="min")
         trainer = MockTrainer()
 
         callback.on_train_begin(trainer)
@@ -234,9 +230,7 @@ class TestModelCheckpoint:
         """Test that ModelCheckpoint saves when metric improves (min mode)."""
         with tempfile.TemporaryDirectory() as tmpdir:
             filepath = Path(tmpdir) / "best_model.pkl"
-            callback = ModelCheckpoint(
-                filepath=str(filepath), monitor="val_loss", mode="min"
-            )
+            callback = ModelCheckpoint(filepath=str(filepath), monitor="val_loss", mode="min")
             trainer = MockTrainer()
 
             callback.on_train_begin(trainer)
@@ -262,9 +256,7 @@ class TestModelCheckpoint:
         """Test that ModelCheckpoint saves when metric improves (max mode)."""
         with tempfile.TemporaryDirectory() as tmpdir:
             filepath = Path(tmpdir) / "best_model.pkl"
-            callback = ModelCheckpoint(
-                filepath=str(filepath), monitor="val_accuracy", mode="max"
-            )
+            callback = ModelCheckpoint(filepath=str(filepath), monitor="val_accuracy", mode="max")
             trainer = MockTrainer()
 
             callback.on_train_begin(trainer)

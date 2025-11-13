@@ -85,9 +85,7 @@ class TestEnsembleSelector:
         ]
         weights = [0.6, 0.4]
 
-        ensemble = EnsembleSelector(
-            selectors=selectors, strategy="soft_voting", weights=weights
-        )
+        ensemble = EnsembleSelector(selectors=selectors, strategy="soft_voting", weights=weights)
         assert ensemble.weights == weights
 
     def test_majority_voting(
@@ -122,9 +120,7 @@ class TestEnsembleSelector:
             assert votes >= 2  # At least 50% of 3 selectors
             assert votes <= 3
 
-    def test_soft_voting(
-        self, sample_classification_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_soft_voting(self, sample_classification_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test soft voting ensemble with weighted scores."""
         X, y = sample_classification_data
 
@@ -224,9 +220,7 @@ class TestEnsembleSelector:
         for feature in ensemble.selected_features_:
             assert ensemble.vote_counts_[feature] >= 1
 
-    def test_transform(
-        self, sample_classification_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_transform(self, sample_classification_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test transform method."""
         X, y = sample_classification_data
 
@@ -263,9 +257,7 @@ class TestEnsembleSelector:
         assert X_transformed.shape[0] == X.shape[0]
         assert len(ensemble.selected_features_) > 0
 
-    def test_get_support(
-        self, sample_classification_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_get_support(self, sample_classification_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test get_support method."""
         X, y = sample_classification_data
 
@@ -335,9 +327,7 @@ class TestEnsembleSelector:
         weights = [0.5]  # Wrong length
 
         with pytest.raises(ValueError, match="must match number of selectors"):
-            EnsembleSelector(
-                selectors=selectors, strategy="soft_voting", weights=weights
-            )
+            EnsembleSelector(selectors=selectors, strategy="soft_voting", weights=weights)
 
     def test_negative_weights(self) -> None:
         """Test that negative weights raise ValueError."""
@@ -348,9 +338,7 @@ class TestEnsembleSelector:
         weights = [0.5, -0.5]  # Negative weight
 
         with pytest.raises(ValueError, match="Weights must be non-negative"):
-            EnsembleSelector(
-                selectors=selectors, strategy="soft_voting", weights=weights
-            )
+            EnsembleSelector(selectors=selectors, strategy="soft_voting", weights=weights)
 
     def test_threshold_out_of_range(self) -> None:
         """Test that threshold must be between 0 and 1."""
@@ -362,9 +350,7 @@ class TestEnsembleSelector:
         with pytest.raises(ValueError, match="threshold must be between 0 and 1"):
             EnsembleSelector(selectors=selectors, strategy="majority", threshold=1.5)
 
-    def test_get_result(
-        self, sample_classification_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_get_result(self, sample_classification_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test get_result returns metadata."""
         X, y = sample_classification_data
 

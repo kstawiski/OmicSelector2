@@ -290,8 +290,6 @@ class SVMClassifier(BaseClassifier):
         self._check_is_fitted()
 
         if not self.probability:
-            raise AttributeError(
-                "predict_proba() requires probability=True during initialization"
-            )
+            raise AttributeError("predict_proba() requires probability=True during initialization")
 
         return self.model_.predict_proba(X)
