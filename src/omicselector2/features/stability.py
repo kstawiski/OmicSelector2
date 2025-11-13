@@ -88,7 +88,7 @@ class StabilitySelector(BaseFeatureSelector):
 
     def __init__(
         self,
-        base_selector: BaseFeatureSelector,
+        base_selector,  # Can be BaseFeatureSelector or callable function
         n_bootstraps: int = 100,
         threshold: float = 0.6,
         sample_fraction: float = 0.8,
@@ -98,7 +98,9 @@ class StabilitySelector(BaseFeatureSelector):
         """Initialize stability selector.
 
         Args:
-            base_selector: Feature selector to wrap (any BaseFeatureSelector).
+            base_selector: Feature selector to wrap. Can be either:
+                - A BaseFeatureSelector instance
+                - A callable function(X, y, cv, n_features) -> (features, metrics)
             n_bootstraps: Number of bootstrap samples to generate.
             threshold: Minimum selection frequency (0-1) to be considered stable.
                 Must be between 0 and 1 (exclusive).
@@ -118,20 +120,34 @@ class StabilitySelector(BaseFeatureSelector):
                 f"sample_fraction must be between 0 and 1, got {sample_fraction}"
             )
 
-        super().__init__(
-            n_features_to_select=None,  # Determined by stability threshold
-            random_state=random_state,
-            verbose=verbose,
+        # Check if base_selector is callable (function-based)
+        self._is_function_selector = callable(base_selector) and not isinstance(
+            base_selector, BaseFeatureSelector
         )
+
+        if not self._is_function_selector:
+            # Class-based selector - use normal initialization
+            super().__init__(
+                n_features_to_select=None,  # Determined by stability threshold
+                random_state=random_state,
+                verbose=verbose,
+            )
 
         self.base_selector = base_selector
         self.n_bootstraps = n_bootstraps
         self.threshold = threshold
         self.sample_fraction = sample_fraction
+        self.random_state = random_state
+        self.verbose = verbose
 
-        # Attributes set during fit
+        # Attributes set during fit/select
         self.stability_scores_: dict[str, float] = {}
         self.selection_counts_: dict[str, int] = {}
+
+        if self._is_function_selector:
+            self.selected_features_: list[str] = []
+            self.support_mask_: Optional[np.ndarray] = None
+            self.feature_scores_: Optional[np.ndarray] = None
 
     def fit(self, X: pd.DataFrame, y: pd.Series) -> "StabilitySelector":
         """Fit stability selector using bootstrap resampling.
@@ -287,3 +303,251 @@ class StabilitySelector(BaseFeatureSelector):
         result.metadata["sample_fraction"] = self.sample_fraction
 
         return result
+
+    def select_stable_features(
+        self, X: pd.DataFrame, y: pd.Series, n_features: int = 100, cv: int = 5
+    ) -> tuple[list[str], dict[str, float]]:
+        """Select stable features using function-based selector.
+
+        This method is designed for function-based selectors that return
+        (features, metrics) tuples. It runs the selector on multiple bootstrap
+        samples and identifies features that are consistently selected.
+
+        Args:
+            X: Feature matrix (samples × features).
+            y: Target variable.
+            n_features: Number of features for base selector to select per bootstrap.
+            cv: Cross-validation folds for base selector.
+
+        Returns:
+            Tuple of (stable_features, stability_scores):
+                - stable_features: List of feature names above threshold
+                - stability_scores: Dict mapping all features to stability scores
+
+        Raises:
+            ValueError: If base_selector is not callable.
+        """
+        if not self._is_function_selector:
+            raise ValueError(
+                "select_stable_features() requires function-based selector. "
+                "Use fit()/transform() for class-based selectors."
+            )
+
+        n_samples = X.shape[0]
+        sample_size = int(n_samples * self.sample_fraction)
+
+        if self.verbose:
+            print(
+                f"Running stability selection with {self.n_bootstraps} bootstraps "
+                f"(sample_fraction={self.sample_fraction}, threshold={self.threshold})..."
+            )
+
+        # Initialize selection counts
+        selection_counts = {feature: 0 for feature in X.columns}
+
+        # Random number generator
+        if self.random_state is not None:
+            rng = np.random.RandomState(self.random_state)
+        else:
+            rng = np.random.RandomState()
+
+        # Run base selector on bootstrap samples
+        for i in range(self.n_bootstraps):
+            # Generate bootstrap sample (without replacement)
+            sample_indices = rng.choice(n_samples, sample_size, replace=False)
+            X_bootstrap = X.iloc[sample_indices]
+            y_bootstrap = y.iloc[sample_indices]
+
+            try:
+                # Call function-based selector
+                selected_features, metrics = self.base_selector(
+                    X_bootstrap, y_bootstrap, cv=cv, n_features=n_features
+                )
+
+                # Count selections
+                for feature in selected_features:
+                    if feature in selection_counts:
+                        selection_counts[feature] += 1
+
+            except Exception as e:
+                if self.verbose:
+                    print(f"Warning: Bootstrap {i+1} failed: {e}")
+                continue
+
+            if self.verbose and (i + 1) % 20 == 0:
+                print(f"  Completed {i+1}/{self.n_bootstraps} bootstraps")
+
+        # Compute stability scores
+        self.selection_counts_ = selection_counts
+        self.stability_scores_ = {
+            feature: count / self.n_bootstraps
+            for feature, count in selection_counts.items()
+        }
+
+        # Select features above threshold
+        stable_features = [
+            feature
+            for feature, score in self.stability_scores_.items()
+            if score >= self.threshold
+        ]
+
+        # Sort by stability score (descending)
+        stable_features.sort(key=lambda f: self.stability_scores_[f], reverse=True)
+
+        self.selected_features_ = stable_features
+
+        if self.verbose:
+            print(
+                f"Selected {len(stable_features)} stable features "
+                f"(threshold={self.threshold})"
+            )
+
+        return stable_features, self.stability_scores_
+
+
+def calculate_stability_scores(
+    bootstrap_selections: Optional[list[list[str]]] = None,
+    all_features: Optional[list[str]] = None,
+    selection_counts: Optional[dict[str, int]] = None,
+    n_bootstraps: Optional[int] = None,
+) -> dict[str, float]:
+    """Calculate stability scores for features.
+
+    Stability score = (number of times feature selected) / (total bootstraps)
+
+    Can be used in two modes:
+    1. From bootstrap selections (list of feature lists)
+    2. From selection counts (dict of counts)
+
+    Args:
+        bootstrap_selections: List of feature lists from each bootstrap.
+        all_features: List of all possible feature names.
+        selection_counts: Dict mapping feature names to selection counts.
+        n_bootstraps: Total number of bootstraps (required if using selection_counts).
+
+    Returns:
+        Dictionary mapping feature names to stability scores (0-1).
+
+    Raises:
+        ValueError: If neither bootstrap_selections nor selection_counts provided.
+
+    Examples:
+        >>> # From bootstrap selections
+        >>> selections = [
+        ...     ['GENE_0', 'GENE_1'],
+        ...     ['GENE_0', 'GENE_2'],
+        ...     ['GENE_0', 'GENE_1'],
+        ... ]
+        >>> scores = calculate_stability_scores(selections, ['GENE_0', 'GENE_1', 'GENE_2'])
+        >>> scores['GENE_0']  # Selected 3/3 times
+        1.0
+        >>> scores['GENE_1']  # Selected 2/3 times
+        0.666...
+
+        >>> # From selection counts
+        >>> counts = {'GENE_0': 10, 'GENE_1': 7}
+        >>> scores = calculate_stability_scores(
+        ...     selection_counts=counts,
+        ...     all_features=['GENE_0', 'GENE_1'],
+        ...     n_bootstraps=10
+        ... )
+    """
+    if bootstrap_selections is not None:
+        # Mode 1: Calculate from bootstrap selections
+        if all_features is None:
+            raise ValueError("all_features required when using bootstrap_selections")
+
+        # Count selections
+        counts = {feature: 0 for feature in all_features}
+        for selected in bootstrap_selections:
+            for feature in selected:
+                if feature in counts:
+                    counts[feature] += 1
+
+        n_boots = len(bootstrap_selections)
+
+        # Calculate scores
+        scores = {feature: count / n_boots for feature, count in counts.items()}
+
+    elif selection_counts is not None:
+        # Mode 2: Calculate from counts
+        if n_bootstraps is None:
+            raise ValueError("n_bootstraps required when using selection_counts")
+
+        if all_features is None:
+            all_features = list(selection_counts.keys())
+
+        scores = {}
+        for feature in all_features:
+            count = selection_counts.get(feature, 0)
+            scores[feature] = count / n_bootstraps
+
+    else:
+        raise ValueError(
+            "Either bootstrap_selections or selection_counts must be provided"
+        )
+
+    return scores
+
+
+def aggregate_feature_rankings(
+    rankings: dict[str, dict[str, float]], method: str = "mean"
+) -> dict[str, float]:
+    """Aggregate feature rankings from multiple methods.
+
+    Combines scores/rankings from different feature selection methods into
+    a single consensus ranking.
+
+    Args:
+        rankings: Dict mapping method names to feature score dicts.
+            Example: {'lasso': {'GENE_0': 0.9, 'GENE_1': 0.7}, 'rf': {...}}
+        method: Aggregation method. Options:
+            - 'mean': Average scores across methods
+            - 'median': Median score across methods
+            - 'max': Maximum score across methods
+            - 'min': Minimum score across methods
+
+    Returns:
+        Dictionary mapping feature names to aggregated scores.
+
+    Raises:
+        ValueError: If invalid aggregation method specified.
+
+    Examples:
+        >>> rankings = {
+        ...     'lasso': {'GENE_0': 0.9, 'GENE_1': 0.7},
+        ...     'rf': {'GENE_0': 0.8, 'GENE_1': 0.9}
+        ... }
+        >>> aggregate_feature_rankings(rankings, method='mean')
+        {'GENE_0': 0.85, 'GENE_1': 0.8}
+    """
+    valid_methods = ["mean", "median", "max", "min"]
+    if method not in valid_methods:
+        raise ValueError(f"method must be one of {valid_methods}, got {method}")
+
+    # Collect all features
+    all_features = set()
+    for feature_scores in rankings.values():
+        all_features.update(feature_scores.keys())
+
+    # Aggregate scores for each feature
+    aggregated = {}
+
+    for feature in all_features:
+        # Collect scores for this feature across methods
+        scores = []
+        for method_name, feature_scores in rankings.items():
+            if feature in feature_scores:
+                scores.append(feature_scores[feature])
+
+        # Aggregate based on method
+        if method == "mean":
+            aggregated[feature] = float(np.mean(scores))
+        elif method == "median":
+            aggregated[feature] = float(np.median(scores))
+        elif method == "max":
+            aggregated[feature] = float(np.max(scores))
+        elif method == "min":
+            aggregated[feature] = float(np.min(scores))
+
+    return aggregated

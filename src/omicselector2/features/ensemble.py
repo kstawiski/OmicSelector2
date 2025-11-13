@@ -528,3 +528,431 @@ class EnsembleSelector(BaseFeatureSelector):
             result.metadata["consensus_scores"] = self.consensus_scores_
 
         return result
+
+
+# Utility functions for ensemble feature selection
+
+def majority_vote(
+    selection_results: dict[str, list[str]], min_votes: int = 2
+) -> list[str]:
+    """Select features by majority voting.
+
+    Args:
+        selection_results: Dict mapping method names to selected feature lists.
+        min_votes: Minimum number of votes required for selection.
+
+    Returns:
+        List of features with >= min_votes.
+
+    Examples:
+        >>> results = {
+        ...     'lasso': ['GENE_0', 'GENE_1'],
+        ...     'rf': ['GENE_0', 'GENE_2'],
+        ...     'mrmr': ['GENE_0', 'GENE_1'],
+        ... }
+        >>> majority_vote(results, min_votes=2)
+        ['GENE_0', 'GENE_1']
+    """
+    # Count votes for each feature
+    vote_counts: dict[str, int] = {}
+    for features in selection_results.values():
+        for feature in features:
+            vote_counts[feature] = vote_counts.get(feature, 0) + 1
+
+    # Select features with enough votes
+    selected = [
+        feature for feature, votes in vote_counts.items() if votes >= min_votes
+    ]
+
+    # Sort by vote count (descending)
+    selected.sort(key=lambda f: vote_counts[f], reverse=True)
+
+    return selected
+
+
+def soft_vote(
+    ranked_results: dict[str, dict[str, float]],
+    n_features: int,
+    weights: Optional[dict[str, float]] = None,
+) -> tuple[list[str], dict[str, float]]:
+    """Select features by soft (weighted) voting.
+
+    Args:
+        ranked_results: Dict mapping method names to feature score dicts.
+        n_features: Number of features to select.
+        weights: Optional weights for each method. If None, equal weights.
+
+    Returns:
+        Tuple of (selected_features, aggregated_scores).
+
+    Examples:
+        >>> results = {
+        ...     'lasso': {'GENE_0': 0.9, 'GENE_1': 0.7},
+        ...     'rf': {'GENE_0': 0.8, 'GENE_2': 0.6},
+        ... }
+        >>> selected, scores = soft_vote(results, n_features=2)
+    """
+    # Default to equal weights
+    if weights is None:
+        weights = {method: 1.0 for method in ranked_results.keys()}
+
+    # Normalize weights
+    weight_sum = sum(weights.values())
+    if weight_sum == 0:
+        raise ValueError("Sum of weights cannot be zero.")
+    normalized_weights = {m: w / weight_sum for m, w in weights.items()}
+
+    # Collect all features
+    all_features = set()
+    for features in ranked_results.values():
+        all_features.update(features.keys())
+
+    # Calculate weighted scores
+    aggregated_scores: dict[str, float] = {}
+
+    for feature in all_features:
+        weighted_score = 0.0
+        for method, feature_scores in ranked_results.items():
+            if feature in feature_scores:
+                # Normalize score to [0, 1] within method
+                method_scores = list(feature_scores.values())
+                max_score = max(method_scores) if method_scores else 1.0
+                normalized_score = feature_scores[feature] / max_score if max_score > 0 else 0
+
+                # Add weighted contribution
+                weighted_score += normalized_weights[method] * normalized_score
+
+        aggregated_scores[feature] = weighted_score
+
+    # Sort and select top-k
+    sorted_features = sorted(
+        aggregated_scores.items(), key=lambda x: x[1], reverse=True
+    )[:n_features]
+
+    selected_features = [f for f, _ in sorted_features]
+
+    return selected_features, aggregated_scores
+
+
+def consensus_ranking(
+    selection_results: dict[str, list[str]], method: str = 'borda_count'
+) -> list[str]:
+    """Create consensus ranking from multiple selection results.
+
+    Args:
+        selection_results: Dict mapping method names to selected feature lists
+            (ordered by importance) or feature score dicts.
+        method: Ranking method. Options:
+            - 'borda_count': Assign points by rank (highest rank = most points)
+            - 'mean_rank': Average rank across methods
+            - 'mean_score': Average normalized scores (requires score dicts)
+
+    Returns:
+        List of features sorted by consensus ranking.
+
+    Examples:
+        >>> results = {
+        ...     'lasso': ['GENE_0', 'GENE_1', 'GENE_2'],
+        ...     'rf': ['GENE_0', 'GENE_2', 'GENE_3'],
+        ... }
+        >>> consensus_ranking(results, method='borda_count')
+        ['GENE_0', 'GENE_2', 'GENE_1', 'GENE_3']
+    """
+    if method == 'borda_count':
+        # Borda count: top ranked gets n points, second gets n-1, etc.
+        borda_counts: dict[str, int] = {}
+
+        for method_name, features in selection_results.items():
+            if isinstance(features, dict):
+                # If dict, use sorted keys (by score)
+                feature_list = sorted(features.keys(), key=lambda f: features[f], reverse=True)
+            else:
+                feature_list = features
+
+            n_features = len(feature_list)
+            for rank, feature in enumerate(feature_list):
+                points = n_features - rank
+                borda_counts[feature] = borda_counts.get(feature, 0) + points
+
+        # Sort by Borda count
+        ranked = sorted(borda_counts.keys(), key=lambda f: borda_counts[f], reverse=True)
+        return ranked
+
+    elif method == 'mean_rank':
+        # Average rank across methods (lower is better)
+        rank_sums: dict[str, float] = {}
+        rank_counts: dict[str, int] = {}
+
+        for method_name, features in selection_results.items():
+            if isinstance(features, dict):
+                feature_list = sorted(features.keys(), key=lambda f: features[f], reverse=True)
+            else:
+                feature_list = features
+
+            for rank, feature in enumerate(feature_list):
+                rank_sums[feature] = rank_sums.get(feature, 0.0) + rank
+                rank_counts[feature] = rank_counts.get(feature, 0) + 1
+
+        # Calculate mean rank
+        mean_ranks = {
+            f: rank_sums[f] / rank_counts[f] for f in rank_sums.keys()
+        }
+
+        # Sort by mean rank (lower is better)
+        ranked = sorted(mean_ranks.keys(), key=lambda f: mean_ranks[f])
+        return ranked
+
+    elif method == 'mean_score':
+        # Average normalized scores
+        score_sums: dict[str, float] = {}
+        score_counts: dict[str, int] = {}
+
+        for method_name, features in selection_results.items():
+            if not isinstance(features, dict):
+                raise ValueError("mean_score requires feature score dicts")
+
+            # Normalize scores to [0, 1]
+            max_score = max(features.values()) if features else 1.0
+            for feature, score in features.items():
+                normalized_score = score / max_score if max_score > 0 else 0
+                score_sums[feature] = score_sums.get(feature, 0.0) + normalized_score
+                score_counts[feature] = score_counts.get(feature, 0) + 1
+
+        # Calculate mean score
+        mean_scores = {
+            f: score_sums[f] / score_counts[f] for f in score_sums.keys()
+        }
+
+        # Sort by mean score (higher is better)
+        ranked = sorted(mean_scores.keys(), key=lambda f: mean_scores[f], reverse=True)
+        return ranked
+
+    else:
+        raise ValueError(f"Unknown method: {method}")
+
+
+def intersection_selection(selection_results: dict[str, list[str]]) -> list[str]:
+    """Select features present in ALL methods (intersection).
+
+    Args:
+        selection_results: Dict mapping method names to selected feature lists.
+
+    Returns:
+        List of features selected by all methods.
+
+    Examples:
+        >>> results = {
+        ...     'lasso': ['GENE_0', 'GENE_1'],
+        ...     'rf': ['GENE_0', 'GENE_2'],
+        ... }
+        >>> intersection_selection(results)
+        ['GENE_0']
+    """
+    if not selection_results:
+        return []
+
+    # Start with first method's features
+    common_features = set(list(selection_results.values())[0])
+
+    # Intersect with remaining methods
+    for features in list(selection_results.values())[1:]:
+        common_features &= set(features)
+
+    return sorted(common_features)
+
+
+def union_selection(selection_results: dict[str, list[str]]) -> list[str]:
+    """Select features present in ANY method (union).
+
+    Args:
+        selection_results: Dict mapping method names to selected feature lists.
+
+    Returns:
+        List of features selected by at least one method.
+
+    Examples:
+        >>> results = {
+        ...     'lasso': ['GENE_0', 'GENE_1'],
+        ...     'rf': ['GENE_0', 'GENE_2'],
+        ... }
+        >>> union_selection(results)
+        ['GENE_0', 'GENE_1', 'GENE_2']
+    """
+    all_features = set()
+    for features in selection_results.values():
+        all_features.update(features)
+
+    return sorted(all_features)
+
+
+class EnsembleFeatureSelector:
+    """Ensemble feature selector for function-based selectors.
+
+    Combines results from multiple function-based feature selection methods
+    using various ensemble strategies.
+
+    Args:
+        base_selectors: List of feature selection functions.
+        ensemble_method: Ensemble strategy. Options:
+            - 'majority_vote': Select features voted for by >= min_votes
+            - 'soft_vote': Weighted average of feature scores
+            - 'consensus_ranking': Borda count rank aggregation
+            - 'intersection': Features selected by ALL methods
+            - 'union': Features selected by ANY method
+        min_votes: For majority_vote, minimum votes required.
+        n_features: Maximum features to select (for soft_vote/consensus_ranking).
+        weights: Optional weights for soft_vote.
+        verbose: Print progress messages.
+
+    Examples:
+        >>> from omicselector2.tasks.feature_selection import (
+        ...     run_lasso_feature_selection,
+        ...     run_randomforest_feature_selection,
+        ... )
+        >>> selector = EnsembleFeatureSelector(
+        ...     base_selectors=[
+        ...         run_lasso_feature_selection,
+        ...         run_randomforest_feature_selection,
+        ...     ],
+        ...     ensemble_method='majority_vote',
+        ...     min_votes=2
+        ... )
+        >>> selected, metrics = selector.select_features(X, y, n_features=20, cv=5)
+    """
+
+    VALID_METHODS = [
+        'majority_vote',
+        'soft_vote',
+        'consensus_ranking',
+        'intersection',
+        'union',
+    ]
+
+    def __init__(
+        self,
+        base_selectors: list,
+        ensemble_method: str = 'majority_vote',
+        min_votes: int = 2,
+        n_features: Optional[int] = None,
+        weights: Optional[dict[str, float]] = None,
+        verbose: bool = False,
+    ):
+        """Initialize ensemble selector."""
+        if ensemble_method not in self.VALID_METHODS:
+            raise ValueError(
+                f"ensemble_method must be one of {self.VALID_METHODS}, "
+                f"got '{ensemble_method}'"
+            )
+
+        if len(base_selectors) < 2:
+            raise ValueError(
+                f"At least 2 selectors required, got {len(base_selectors)}"
+            )
+
+        self.base_selectors = base_selectors
+        self.ensemble_method = ensemble_method
+        self.min_votes = min_votes
+        self.n_features = n_features
+        self.weights = weights
+        self.verbose = verbose
+
+    def select_features(
+        self, X: pd.DataFrame, y: pd.Series, n_features: int = 100, cv: int = 5
+    ) -> tuple[list[str], dict]:
+        """Select features using ensemble of methods.
+
+        Args:
+            X: Feature matrix.
+            y: Target variable.
+            n_features: Number of features for each base selector.
+            cv: Cross-validation folds for base selectors.
+
+        Returns:
+            Tuple of (selected_features, metrics).
+        """
+        if self.verbose:
+            print(
+                f"Running ensemble with {len(self.base_selectors)} methods "
+                f"(strategy={self.ensemble_method})..."
+            )
+
+        # Run each base selector
+        method_results = {}
+        method_scores = {}
+
+        for i, selector_func in enumerate(self.base_selectors):
+            if self.verbose:
+                method_name = getattr(selector_func, '__name__', f'method_{i}')
+                print(f"  Running {method_name}...")
+
+            try:
+                selected, metrics = selector_func(X, y, cv=cv, n_features=n_features)
+                method_name = metrics.get('method', f'method_{i}')
+                method_results[method_name] = selected
+
+                # Extract scores if available
+                if 'importance_scores' in metrics:
+                    method_scores[method_name] = metrics['importance_scores']
+                elif 'mutual_information_scores' in metrics:
+                    method_scores[method_name] = metrics['mutual_information_scores']
+                elif 'relief_scores' in metrics:
+                    method_scores[method_name] = metrics['relief_scores']
+
+            except Exception as e:
+                if self.verbose:
+                    print(f"  Warning: Method {i} failed: {e}")
+                continue
+
+        # Apply ensemble strategy
+        if self.ensemble_method == 'majority_vote':
+            selected_features = majority_vote(method_results, min_votes=self.min_votes)
+
+        elif self.ensemble_method == 'soft_vote':
+            if not method_scores:
+                # Fallback to majority vote if no scores available
+                selected_features = majority_vote(method_results, min_votes=self.min_votes)
+            else:
+                n_select = self.n_features if self.n_features else n_features
+                selected_features, aggregated_scores = soft_vote(
+                    method_scores, n_features=n_select, weights=self.weights
+                )
+
+        elif self.ensemble_method == 'consensus_ranking':
+            # Use scores if available, otherwise use rankings
+            if method_scores:
+                selected_features = consensus_ranking(method_scores, method='mean_score')
+            else:
+                selected_features = consensus_ranking(method_results, method='borda_count')
+
+            # Limit to n_features
+            if self.n_features:
+                selected_features = selected_features[:self.n_features]
+
+        elif self.ensemble_method == 'intersection':
+            selected_features = intersection_selection(method_results)
+
+        elif self.ensemble_method == 'union':
+            selected_features = union_selection(method_results)
+            # Limit to n_features
+            if self.n_features:
+                selected_features = selected_features[:self.n_features]
+
+        else:
+            raise ValueError(f"Unknown ensemble_method: {self.ensemble_method}")
+
+        # Build metrics
+        ensemble_metrics = {
+            'ensemble_method': self.ensemble_method,
+            'n_methods': len(method_results),
+            'n_features_selected': len(selected_features),
+            'method_results': method_results,
+        }
+
+        if method_scores and self.ensemble_method == 'soft_vote':
+            ensemble_metrics['aggregated_scores'] = aggregated_scores
+
+        if self.verbose:
+            print(f"Ensemble selected {len(selected_features)} features")
+
+        return selected_features, ensemble_metrics
+

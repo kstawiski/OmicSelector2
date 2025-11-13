@@ -26,7 +26,7 @@ except ImportError:
     SQLALCHEMY_AVAILABLE = False
     Session = None  # type: ignore
 
-from omicselector2.db import User, get_db
+from omicselector2.db import User, UserRole, get_db
 from omicselector2.utils.security import decode_access_token
 
 # HTTP Bearer security scheme
@@ -34,6 +34,10 @@ if FASTAPI_AVAILABLE:
     security = HTTPBearer()
 else:
     security = None  # type: ignore
+
+
+# Alias for consistency with test expectations
+get_db_session = get_db
 
 
 async def get_current_user(
@@ -83,8 +87,9 @@ async def get_current_user(
 
     if user is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
     if not user.is_active:
@@ -112,11 +117,11 @@ async def get_current_active_user(
     return current_user
 
 
-def require_role(required_role: str):
+def require_role(required_role: UserRole):
     """Create dependency that requires specific user role.
 
     Args:
-        required_role: Required role (USER, RESEARCHER, ADMIN)
+        required_role: Required role (UserRole enum)
 
     Returns:
         FastAPI dependency function
@@ -125,12 +130,12 @@ def require_role(required_role: str):
         @app.delete("/datasets/{id}")
         async def delete_dataset(
             id: str,
-            user: User = Depends(require_role("RESEARCHER"))
+            user: User = Depends(require_role(UserRole.RESEARCHER))
         ):
             ...
     """
 
-    async def role_checker(
+    def role_checker(
         current_user: User = Depends(get_current_user),  # type: ignore
     ) -> User:
         """Check if user has required role.
@@ -148,14 +153,14 @@ def require_role(required_role: str):
             raise ImportError("FastAPI is required for role checking")
 
         # Admin has access to everything
-        if current_user.role.value == "admin":
+        if current_user.role == UserRole.ADMIN:
             return current_user
 
         # Check if user has required role
-        if current_user.role.value != required_role.lower():
+        if current_user.role != required_role:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Insufficient permissions. Required role: {required_role}",
+                detail=f"Insufficient permissions. Required role: {required_role.value}",
             )
 
         return current_user
@@ -163,9 +168,66 @@ def require_role(required_role: str):
     return role_checker
 
 
+def require_researcher(
+    current_user: User = Depends(get_current_user),  # type: ignore
+) -> User:
+    """Require RESEARCHER or ADMIN role.
+
+    Args:
+        current_user: Current user from authentication
+
+    Returns:
+        Current user if authorized
+
+    Raises:
+        HTTPException: If user doesn't have RESEARCHER or ADMIN role
+    """
+    if not FASTAPI_AVAILABLE:
+        raise ImportError("FastAPI is required for role checking")
+
+    # Admin and Researcher have access
+    if current_user.role in (UserRole.ADMIN, UserRole.RESEARCHER):
+        return current_user
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail=f"Insufficient permissions. Required role: RESEARCHER or ADMIN",
+    )
+
+
+def require_admin(
+    current_user: User = Depends(get_current_user),  # type: ignore
+) -> User:
+    """Require ADMIN role.
+
+    Args:
+        current_user: Current user from authentication
+
+    Returns:
+        Current user if authorized
+
+    Raises:
+        HTTPException: If user doesn't have ADMIN role
+    """
+    if not FASTAPI_AVAILABLE:
+        raise ImportError("FastAPI is required for role checking")
+
+    # Only Admin has access
+    if current_user.role == UserRole.ADMIN:
+        return current_user
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail=f"Insufficient permissions. Required role: ADMIN",
+    )
+
+
 __all__ = [
+    "get_db_session",
     "get_current_user",
     "get_current_active_user",
     "require_role",
+    "require_researcher",
+    "require_admin",
     "security",
 ]

@@ -56,7 +56,12 @@ if SQLALCHEMY_AVAILABLE:
         )
 
         # Relationships
-        job = relationship("Job", back_populates="result")
+        job = relationship(
+            "Job",
+            back_populates="result",
+            foreign_keys="[Result.job_id]",
+            primaryjoin="Result.job_id == Job.id"
+        )
 
         def __repr__(self) -> str:
             """String representation of Result.
