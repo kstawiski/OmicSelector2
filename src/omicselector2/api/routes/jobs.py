@@ -7,7 +7,7 @@ import base64
 import binascii
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
@@ -259,7 +259,7 @@ else:
             logger.error(f"Failed to submit Celery task: {str(e)}")
             new_job.status = JobStatus.FAILED
             new_job.error_message = "Failed to queue job for execution"
-            new_job.completed_at = datetime.utcnow()
+            new_job.completed_at = datetime.now(timezone.utc)
             db.commit()
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

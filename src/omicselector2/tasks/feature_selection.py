@@ -4,7 +4,7 @@ This module provides Celery tasks for running feature selection jobs.
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 
 logger = logging.getLogger(__name__)
@@ -1042,7 +1042,7 @@ if CELERY_AVAILABLE and celery_app:
                     raise ValueError(f"Job {job_id} not found")
 
                 job.status = JobStatus.RUNNING
-                job.started_at = datetime.utcnow()
+                job.started_at = datetime.now(timezone.utc)
                 db.commit()
 
                 # Update task state
@@ -1276,7 +1276,7 @@ if CELERY_AVAILABLE and celery_app:
 
                 # Update job status to COMPLETED
                 job.status = JobStatus.COMPLETED
-                job.completed_at = datetime.utcnow()
+                job.completed_at = datetime.now(timezone.utc)
                 job.result_id = result.id
                 db.commit()
 
@@ -1302,7 +1302,7 @@ if CELERY_AVAILABLE and celery_app:
                     job = db.query(Job).filter(Job.id == UUID(job_id)).first()
                     if job:
                         job.status = JobStatus.FAILED
-                        job.completed_at = datetime.utcnow()
+                        job.completed_at = datetime.now(timezone.utc)
                         job.error_message = str(e)
                         db.commit()
                 finally:
