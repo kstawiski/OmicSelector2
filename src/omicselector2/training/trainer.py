@@ -159,7 +159,9 @@ class Trainer:
             callback.on_train_begin(self)
 
         # Check if model supports incremental training (has partial_fit method)
-        has_partial_fit = hasattr(self.model.model, "partial_fit")
+        # Check the actual model implementation (model_) if it exists, otherwise check self.model
+        model_obj = getattr(self.model, "model_", self.model)
+        has_partial_fit = hasattr(model_obj, "partial_fit")
 
         # For classical models without partial_fit, fit only once (epochs is ignored)
         # For models with partial_fit, the loop allows iterative training
