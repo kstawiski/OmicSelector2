@@ -52,16 +52,16 @@ class ElasticNetSelector(BaseFeatureSelector):
 
     def __init__(
         self,
-        alpha: Union[float, Literal['auto']] = 1.0,
-        l1_ratio: Union[float, Literal['auto']] = 0.5,
-        task: Literal['regression', 'classification'] = 'regression',
+        alpha: Union[float, Literal["auto"]] = 1.0,
+        l1_ratio: Union[float, Literal["auto"]] = 0.5,
+        task: Literal["regression", "classification"] = "regression",
         cv: int = 5,
         max_iter: int = 10000,
         tol: float = 1e-4,
         n_features_to_select: Optional[int] = None,
         random_state: Optional[int] = None,
         verbose: bool = False,
-        standardize: bool = True
+        standardize: bool = True,
     ) -> None:
         """Initialize Elastic Net feature selector.
 
@@ -81,9 +81,7 @@ class ElasticNetSelector(BaseFeatureSelector):
             ValueError: If alpha is not positive or l1_ratio not in [0, 1].
         """
         super().__init__(
-            n_features_to_select=n_features_to_select,
-            random_state=random_state,
-            verbose=verbose
+            n_features_to_select=n_features_to_select, random_state=random_state, verbose=verbose
         )
 
         if isinstance(alpha, (int, float)) and alpha <= 0:
@@ -92,7 +90,7 @@ class ElasticNetSelector(BaseFeatureSelector):
         if isinstance(l1_ratio, (int, float)) and not 0 <= l1_ratio <= 1:
             raise ValueError(f"l1_ratio must be in [0, 1], got {l1_ratio}")
 
-        if task not in ['regression', 'classification']:
+        if task not in ["regression", "classification"]:
             raise ValueError(f"task must be 'regression' or 'classification', got {task}")
 
         self.alpha = alpha
@@ -124,13 +122,9 @@ class ElasticNetSelector(BaseFeatureSelector):
         X_scaled = X.copy()
         if self.standardize:
             self.scaler_ = StandardScaler()
-            X_scaled = pd.DataFrame(
-                self.scaler_.fit_transform(X),
-                columns=X.columns,
-                index=X.index
-            )
+            X_scaled = pd.DataFrame(self.scaler_.fit_transform(X), columns=X.columns, index=X.index)
 
-        if self.task == 'regression':
+        if self.task == "regression":
             self._fit_regression(X_scaled, y)
         else:
             self._fit_classification(X_scaled, y)
@@ -144,9 +138,11 @@ class ElasticNetSelector(BaseFeatureSelector):
 
     def _fit_regression(self, X: pd.DataFrame, y: pd.Series) -> None:
         """Fit Elastic Net for regression."""
-        if self.alpha == 'auto' or self.l1_ratio == 'auto':
+        if self.alpha == "auto" or self.l1_ratio == "auto":
             # Use cross-validation
-            l1_ratios = [0.1, 0.5, 0.7, 0.9, 0.95, 0.99] if self.l1_ratio == 'auto' else [self.l1_ratio]
+            l1_ratios = (
+                [0.1, 0.5, 0.7, 0.9, 0.95, 0.99] if self.l1_ratio == "auto" else [self.l1_ratio]
+            )
 
             self.model_ = ElasticNetCV(
                 l1_ratio=l1_ratios,
@@ -154,7 +150,7 @@ class ElasticNetSelector(BaseFeatureSelector):
                 max_iter=self.max_iter,
                 tol=self.tol,
                 random_state=self.random_state,
-                n_jobs=-1
+                n_jobs=-1,
             )
             self.model_.fit(X, y)
             self.alpha_ = self.model_.alpha_
@@ -165,7 +161,7 @@ class ElasticNetSelector(BaseFeatureSelector):
                 l1_ratio=self.l1_ratio,
                 max_iter=self.max_iter,
                 tol=self.tol,
-                random_state=self.random_state
+                random_state=self.random_state,
             )
             self.model_.fit(X, y)
             self.alpha_ = self.alpha
@@ -173,24 +169,24 @@ class ElasticNetSelector(BaseFeatureSelector):
 
     def _fit_classification(self, X: pd.DataFrame, y: pd.Series) -> None:
         """Fit Elastic Net for classification (Logistic with elasticnet penalty)."""
-        if self.alpha == 'auto':
+        if self.alpha == "auto":
             from sklearn.model_selection import cross_val_score
 
             C_values = np.logspace(-4, 4, 20)
-            l1_ratio = 0.5 if self.l1_ratio == 'auto' else self.l1_ratio
+            l1_ratio = 0.5 if self.l1_ratio == "auto" else self.l1_ratio
 
             best_score = -np.inf
             best_C = 1.0
 
             for C in C_values:
                 model = LogisticRegression(
-                    penalty='elasticnet',
+                    penalty="elasticnet",
                     C=C,
                     l1_ratio=l1_ratio,
-                    solver='saga',
+                    solver="saga",
                     max_iter=self.max_iter,
                     tol=self.tol,
-                    random_state=self.random_state
+                    random_state=self.random_state,
                 )
                 scores = cross_val_score(model, X, y, cv=self.cv, n_jobs=-1)
 
@@ -199,29 +195,29 @@ class ElasticNetSelector(BaseFeatureSelector):
                     best_C = C
 
             self.model_ = LogisticRegression(
-                penalty='elasticnet',
+                penalty="elasticnet",
                 C=best_C,
                 l1_ratio=l1_ratio,
-                solver='saga',
+                solver="saga",
                 max_iter=self.max_iter,
                 tol=self.tol,
-                random_state=self.random_state
+                random_state=self.random_state,
             )
             self.model_.fit(X, y)
             self.alpha_ = 1.0 / best_C
             self.l1_ratio_ = l1_ratio
         else:
             C = 1.0 / self.alpha
-            l1_ratio = 0.5 if self.l1_ratio == 'auto' else self.l1_ratio
+            l1_ratio = 0.5 if self.l1_ratio == "auto" else self.l1_ratio
 
             self.model_ = LogisticRegression(
-                penalty='elasticnet',
+                penalty="elasticnet",
                 C=C,
                 l1_ratio=l1_ratio,
-                solver='saga',
+                solver="saga",
                 max_iter=self.max_iter,
                 tol=self.tol,
-                random_state=self.random_state
+                random_state=self.random_state,
             )
             self.model_.fit(X, y)
             self.alpha_ = self.alpha

@@ -38,29 +38,23 @@ if SQLALCHEMY_AVAILABLE:
 
         __tablename__ = "results"
 
-        id = Column(
-            UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True
-        )
+        id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
         job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.id"), nullable=False)
 
         # Result data
-        selected_features = Column(
-            ARRAY(String), nullable=True
-        )  # For feature selection jobs
+        selected_features = Column(ARRAY(String), nullable=True)  # For feature selection jobs
         metrics = Column(JSONB, nullable=True)  # Performance metrics
         artifacts_path = Column(String(500), nullable=True)  # S3/MinIO path
 
         # Timestamps
-        created_at = Column(
-            DateTime(timezone=True), server_default=func.now(), nullable=False
-        )
+        created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
         # Relationships
         job = relationship(
             "Job",
             back_populates="result",
             foreign_keys="[Result.job_id]",
-            primaryjoin="Result.job_id == Job.id"
+            primaryjoin="Result.job_id == Job.id",
         )
 
         def __repr__(self) -> str:
@@ -69,9 +63,7 @@ if SQLALCHEMY_AVAILABLE:
             Returns:
                 Result representation string
             """
-            n_features = (
-                len(self.selected_features) if self.selected_features else None
-            )
+            n_features = len(self.selected_features) if self.selected_features else None
             return f"<Result(id={self.id}, job_id={self.job_id}, n_features={n_features})>"
 
 else:

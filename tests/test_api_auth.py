@@ -80,7 +80,7 @@ class TestUserRegistration:
             "email": "newuser@example.com",
             "username": "newuser",
             "password": "securepassword123",
-            "full_name": "New User"
+            "full_name": "New User",
         }
 
         response = test_client.post("/api/v1/auth/register", json=registration_data)
@@ -109,7 +109,7 @@ class TestUserRegistration:
         registration_data = {
             "email": "existing@example.com",
             "username": "newuser",
-            "password": "securepassword123"
+            "password": "securepassword123",
         }
 
         response = test_client.post("/api/v1/auth/register", json=registration_data)
@@ -133,7 +133,7 @@ class TestUserRegistration:
         registration_data = {
             "email": "new@example.com",
             "username": "existinguser",
-            "password": "securepassword123"
+            "password": "securepassword123",
         }
 
         response = test_client.post("/api/v1/auth/register", json=registration_data)
@@ -148,7 +148,7 @@ class TestUserRegistration:
         registration_data = {
             "email": "invalid-email",
             "username": "newuser",
-            "password": "securepassword123"
+            "password": "securepassword123",
         }
 
         response = test_client.post("/api/v1/auth/register", json=registration_data)
@@ -160,7 +160,7 @@ class TestUserRegistration:
         registration_data = {
             "email": "newuser@example.com",
             "username": "newuser",
-            "password": "short"  # Less than 8 characters
+            "password": "short",  # Less than 8 characters
         }
 
         response = test_client.post("/api/v1/auth/register", json=registration_data)
@@ -186,10 +186,7 @@ class TestUserLogin:
 
         app.dependency_overrides[lambda: None] = lambda: mock_db
 
-        login_data = {
-            "username": "testuser",
-            "password": "testpassword123"
-        }
+        login_data = {"username": "testuser", "password": "testpassword123"}
 
         response = test_client.post("/api/v1/auth/login", json=login_data)
 
@@ -215,10 +212,7 @@ class TestUserLogin:
 
         app.dependency_overrides[lambda: None] = lambda: mock_db
 
-        login_data = {
-            "username": "test@example.com",  # Using email
-            "password": "testpassword123"
-        }
+        login_data = {"username": "test@example.com", "password": "testpassword123"}  # Using email
 
         response = test_client.post("/api/v1/auth/login", json=login_data)
 
@@ -232,10 +226,7 @@ class TestUserLogin:
 
         app.dependency_overrides[lambda: None] = lambda: mock_db
 
-        login_data = {
-            "username": "nonexistent",
-            "password": "testpassword123"
-        }
+        login_data = {"username": "nonexistent", "password": "testpassword123"}
 
         response = test_client.post("/api/v1/auth/login", json=login_data)
 
@@ -257,10 +248,7 @@ class TestUserLogin:
 
         app.dependency_overrides[lambda: None] = lambda: mock_db
 
-        login_data = {
-            "username": "testuser",
-            "password": "wrongpassword"
-        }
+        login_data = {"username": "testuser", "password": "wrongpassword"}
 
         response = test_client.post("/api/v1/auth/login", json=login_data)
 
@@ -281,10 +269,7 @@ class TestUserLogin:
 
         app.dependency_overrides[lambda: None] = lambda: mock_db
 
-        login_data = {
-            "username": "testuser",
-            "password": "testpassword123"
-        }
+        login_data = {"username": "testuser", "password": "testpassword123"}
 
         response = test_client.post("/api/v1/auth/login", json=login_data)
 
@@ -318,10 +303,7 @@ class TestGetCurrentUser:
 
         app.dependency_overrides[get_current_user] = override_get_current_user
 
-        response = test_client.get(
-            "/api/v1/auth/me",
-            headers={"Authorization": f"Bearer {token}"}
-        )
+        response = test_client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
 
         app.dependency_overrides.clear()
 
@@ -341,8 +323,7 @@ class TestGetCurrentUser:
     def test_get_me_invalid_token(self, test_client):
         """Test getting current user with invalid token."""
         response = test_client.get(
-            "/api/v1/auth/me",
-            headers={"Authorization": "Bearer invalid.token.here"}
+            "/api/v1/auth/me", headers={"Authorization": "Bearer invalid.token.here"}
         )
 
         assert response.status_code in [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
@@ -386,8 +367,8 @@ class TestAuthenticationIntegration:
                 "email": "integration@example.com",
                 "username": "integrationuser",
                 "password": "integrationpass123",
-                "full_name": "Integration Test"
-            }
+                "full_name": "Integration Test",
+            },
         )
 
         assert registration_response.status_code == status.HTTP_201_CREATED
@@ -398,10 +379,7 @@ class TestAuthenticationIntegration:
 
         login_response = test_client.post(
             "/api/v1/auth/login",
-            json={
-                "username": "integrationuser",
-                "password": "integrationpass123"
-            }
+            json={"username": "integrationuser", "password": "integrationpass123"},
         )
 
         assert login_response.status_code == status.HTTP_200_OK
@@ -416,8 +394,7 @@ class TestAuthenticationIntegration:
         app.dependency_overrides[get_current_user] = override_get_current_user
 
         me_response = test_client.get(
-            "/api/v1/auth/me",
-            headers={"Authorization": f"Bearer {token}"}
+            "/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"}
         )
 
         app.dependency_overrides.clear()

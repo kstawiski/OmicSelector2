@@ -116,7 +116,10 @@ class TestGetCurrentUser:
             await get_current_user(credentials=mock_credentials, db=mock_db)
 
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
-        assert "Invalid" in str(exc_info.value.detail) or "not validate" in str(exc_info.value.detail).lower()
+        assert (
+            "Invalid" in str(exc_info.value.detail)
+            or "not validate" in str(exc_info.value.detail).lower()
+        )
 
     @pytest.mark.asyncio
     async def test_get_current_user_with_expired_token(self):
@@ -126,8 +129,7 @@ class TestGetCurrentUser:
         # Create expired token
         token_data = {"sub": user_id}
         expired_token = create_access_token(
-            token_data,
-            expires_delta=timedelta(seconds=-1)  # Already expired
+            token_data, expires_delta=timedelta(seconds=-1)  # Already expired
         )
 
         mock_credentials = Mock()

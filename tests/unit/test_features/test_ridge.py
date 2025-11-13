@@ -36,8 +36,9 @@ def sample_regression_data() -> tuple[pd.DataFrame, pd.Series]:
 
     # Target based on first 10 features
     weights = np.random.rand(n_informative) * 2
-    y = pd.Series((X.iloc[:, :n_informative] * weights).sum(axis=1) +
-                  np.random.randn(n_samples) * 0.1)
+    y = pd.Series(
+        (X.iloc[:, :n_informative] * weights).sum(axis=1) + np.random.randn(n_samples) * 0.1
+    )
 
     return X, y
 
@@ -76,9 +77,7 @@ class TestRidgeSelector:
         assert selector.alpha == 1.0
         assert selector.task == "regression"
 
-    def test_fit_regression(
-        self, sample_regression_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_fit_regression(self, sample_regression_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test fit method for regression task."""
         X, y = sample_regression_data
         selector = RidgeSelector(alpha=1.0, n_features_to_select=20)
@@ -104,9 +103,7 @@ class TestRidgeSelector:
         assert selector.task == "classification"
         assert len(selector.selected_features_) == 15
 
-    def test_transform(
-        self, sample_regression_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_transform(self, sample_regression_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test transform returns DataFrame with selected features."""
         X, y = sample_regression_data
         selector = RidgeSelector(n_features_to_select=30)
@@ -119,9 +116,7 @@ class TestRidgeSelector:
         assert X_transformed.shape[1] == 30
         assert all(col in X.columns for col in X_transformed.columns)
 
-    def test_fit_transform(
-        self, sample_regression_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_fit_transform(self, sample_regression_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test fit_transform performs fit and transform in one call."""
         X, y = sample_regression_data
         selector = RidgeSelector(n_features_to_select=25)
@@ -132,9 +127,7 @@ class TestRidgeSelector:
         assert X_transformed.shape[1] == 25
         assert hasattr(selector, "selected_features_")
 
-    def test_get_support(
-        self, sample_regression_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_get_support(self, sample_regression_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test get_support returns boolean mask."""
         X, y = sample_regression_data
         selector = RidgeSelector(n_features_to_select=40)
@@ -161,9 +154,7 @@ class TestRidgeSelector:
         assert indices.dtype == np.int64 or indices.dtype == np.intp
         assert len(indices) == 35
 
-    def test_auto_alpha_cv(
-        self, sample_regression_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_auto_alpha_cv(self, sample_regression_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test automatic alpha selection via cross-validation."""
         X, y = sample_regression_data
         selector = RidgeSelector(alpha="auto", cv=5, n_features_to_select=20)
@@ -217,9 +208,7 @@ class TestRidgeSelector:
         with pytest.raises(ValueError, match="task must be 'regression' or 'classification'"):
             RidgeSelector(task="invalid")
 
-    def test_get_result(
-        self, sample_regression_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_get_result(self, sample_regression_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test get_result returns FeatureSelectorResult."""
         X, y = sample_regression_data
         selector = RidgeSelector(n_features_to_select=30)
@@ -233,12 +222,12 @@ class TestRidgeSelector:
         assert result.n_features_selected == 30
         assert result.method_name == "RidgeSelector"
         # Scores should be sorted by absolute value (descending)
-        assert all(result.feature_scores[i] >= result.feature_scores[i + 1]
-                   for i in range(len(result.feature_scores) - 1))
+        assert all(
+            result.feature_scores[i] >= result.feature_scores[i + 1]
+            for i in range(len(result.feature_scores) - 1)
+        )
 
-    def test_reproducibility(
-        self, sample_regression_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_reproducibility(self, sample_regression_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test reproducibility with same random_state."""
         X, y = sample_regression_data
 
@@ -252,9 +241,7 @@ class TestRidgeSelector:
 
         assert features1 == features2
 
-    def test_standardization(
-        self, sample_regression_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_standardization(self, sample_regression_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test that features are standardized before fitting."""
         X, y = sample_regression_data
 
@@ -275,12 +262,14 @@ class TestRidgeSelector:
 
         # Create highly correlated features
         base = np.random.randn(n_samples)
-        X = pd.DataFrame({
-            "f1": base + np.random.randn(n_samples) * 0.1,
-            "f2": base + np.random.randn(n_samples) * 0.1,  # Highly correlated with f1
-            "f3": np.random.randn(n_samples),
-            "f4": np.random.randn(n_samples),
-        })
+        X = pd.DataFrame(
+            {
+                "f1": base + np.random.randn(n_samples) * 0.1,
+                "f2": base + np.random.randn(n_samples) * 0.1,  # Highly correlated with f1
+                "f3": np.random.randn(n_samples),
+                "f4": np.random.randn(n_samples),
+            }
+        )
 
         y = pd.Series(base * 2 + np.random.randn(n_samples) * 0.1)
 

@@ -16,11 +16,11 @@ exclude =
     docs,
     migrations
 ignore =
-    E203,  # whitespace before ':' (black compatibility)
-    E266,  # too many leading '#' for block comment
-    E501,  # line too long (handled by black)
-    W503,  # line break before binary operator (black compatibility)
-    W504   # line break after binary operator
+    E203,
+    E266,
+    E501,
+    W503,
+    W504
 max-complexity = 15
 per-file-ignores =
     __init__.py:F401,F403

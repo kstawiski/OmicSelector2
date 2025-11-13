@@ -285,6 +285,4 @@ class TestModelPersistence:
             loaded_model = DummyModel.load(save_path)
             loaded_predictions = loaded_model.predict(X_test)
 
-            np.testing.assert_array_almost_equal(
-                original_predictions, loaded_predictions
-            )
+            np.testing.assert_array_almost_equal(original_predictions, loaded_predictions)

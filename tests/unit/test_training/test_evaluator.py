@@ -56,9 +56,7 @@ def binary_classification_predictions() -> tuple[np.ndarray, np.ndarray, np.ndar
 
 
 @pytest.fixture
-def multiclass_classification_predictions() -> tuple[
-    np.ndarray, np.ndarray, np.ndarray
-]:
+def multiclass_classification_predictions() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Generate sample multiclass classification predictions.
 
     Returns:
@@ -131,9 +129,7 @@ class TestClassificationEvaluator:
 
         assert ClassificationEvaluator is not None
 
-    def test_binary_accuracy(
-        self, binary_classification_predictions: tuple
-    ) -> None:
+    def test_binary_accuracy(self, binary_classification_predictions: tuple) -> None:
         """Test accuracy calculation for binary classification."""
         y_true, y_pred, _ = binary_classification_predictions
 
@@ -147,9 +143,7 @@ class TestClassificationEvaluator:
         expected_accuracy = np.mean(y_true == y_pred)
         assert abs(metrics["accuracy"] - expected_accuracy) < 1e-6
 
-    def test_binary_precision_recall_f1(
-        self, binary_classification_predictions: tuple
-    ) -> None:
+    def test_binary_precision_recall_f1(self, binary_classification_predictions: tuple) -> None:
         """Test precision, recall, and F1 for binary classification."""
         y_true, y_pred, _ = binary_classification_predictions
 
@@ -164,9 +158,7 @@ class TestClassificationEvaluator:
         assert 0 <= metrics["recall"] <= 1
         assert 0 <= metrics["f1"] <= 1
 
-    def test_binary_auc_roc(
-        self, binary_classification_predictions: tuple
-    ) -> None:
+    def test_binary_auc_roc(self, binary_classification_predictions: tuple) -> None:
         """Test AUC-ROC calculation for binary classification."""
         y_true, _, y_score = binary_classification_predictions
 
@@ -179,9 +171,7 @@ class TestClassificationEvaluator:
         # AUC should be better than random (0.5)
         assert metrics["auc_roc"] > 0.5
 
-    def test_binary_auc_pr(
-        self, binary_classification_predictions: tuple
-    ) -> None:
+    def test_binary_auc_pr(self, binary_classification_predictions: tuple) -> None:
         """Test AUC-PR calculation for binary classification."""
         y_true, _, y_score = binary_classification_predictions
 
@@ -191,9 +181,7 @@ class TestClassificationEvaluator:
         assert "auc_pr" in metrics
         assert 0 <= metrics["auc_pr"] <= 1
 
-    def test_confusion_matrix(
-        self, binary_classification_predictions: tuple
-    ) -> None:
+    def test_confusion_matrix(self, binary_classification_predictions: tuple) -> None:
         """Test confusion matrix calculation."""
         y_true, y_pred, _ = binary_classification_predictions
 
@@ -209,9 +197,7 @@ class TestClassificationEvaluator:
         # Sum should equal number of samples
         assert cm.sum() == len(y_true)
 
-    def test_multiclass_accuracy(
-        self, multiclass_classification_predictions: tuple
-    ) -> None:
+    def test_multiclass_accuracy(self, multiclass_classification_predictions: tuple) -> None:
         """Test accuracy for multiclass classification."""
         y_true, y_pred, _ = multiclass_classification_predictions
 
@@ -221,9 +207,7 @@ class TestClassificationEvaluator:
         assert "accuracy" in metrics
         assert 0 <= metrics["accuracy"] <= 1
 
-    def test_multiclass_macro_metrics(
-        self, multiclass_classification_predictions: tuple
-    ) -> None:
+    def test_multiclass_macro_metrics(self, multiclass_classification_predictions: tuple) -> None:
         """Test macro-averaged metrics for multiclass."""
         y_true, y_pred, _ = multiclass_classification_predictions
 
@@ -238,23 +222,17 @@ class TestClassificationEvaluator:
         assert 0 <= metrics["recall_macro"] <= 1
         assert 0 <= metrics["f1_macro"] <= 1
 
-    def test_multiclass_auc_ovr(
-        self, multiclass_classification_predictions: tuple
-    ) -> None:
+    def test_multiclass_auc_ovr(self, multiclass_classification_predictions: tuple) -> None:
         """Test one-vs-rest AUC for multiclass."""
         y_true, _, y_score = multiclass_classification_predictions
 
         evaluator = ClassificationEvaluator()
-        metrics = evaluator.evaluate(
-            y_true, y_score, multiclass=True, probabilities=True
-        )
+        metrics = evaluator.evaluate(y_true, y_score, multiclass=True, probabilities=True)
 
         assert "auc_ovr" in metrics
         assert 0 <= metrics["auc_ovr"] <= 1
 
-    def test_per_class_metrics(
-        self, binary_classification_predictions: tuple
-    ) -> None:
+    def test_per_class_metrics(self, binary_classification_predictions: tuple) -> None:
         """Test per-class metrics calculation."""
         y_true, y_pred, _ = binary_classification_predictions
 

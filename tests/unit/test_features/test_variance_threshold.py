@@ -32,12 +32,12 @@ def sample_data_with_low_variance() -> tuple[pd.DataFrame, pd.Series]:
     # Create features with different variances
     data = {
         "high_var_1": np.random.randn(n_samples) * 10,  # High variance
-        "high_var_2": np.random.randn(n_samples) * 5,   # High variance
-        "low_var_1": np.ones(n_samples) * 5,             # Zero variance (constant)
-        "low_var_2": np.random.randn(n_samples) * 0.01, # Very low variance
-        "medium_var_1": np.random.randn(n_samples) * 1, # Medium variance
-        "medium_var_2": np.random.randn(n_samples) * 2, # Medium variance
-        "zero_var": np.zeros(n_samples),                 # Zero variance
+        "high_var_2": np.random.randn(n_samples) * 5,  # High variance
+        "low_var_1": np.ones(n_samples) * 5,  # Zero variance (constant)
+        "low_var_2": np.random.randn(n_samples) * 0.01,  # Very low variance
+        "medium_var_1": np.random.randn(n_samples) * 1,  # Medium variance
+        "medium_var_2": np.random.randn(n_samples) * 2,  # Medium variance
+        "zero_var": np.zeros(n_samples),  # Zero variance
     }
 
     X = pd.DataFrame(data)
@@ -98,7 +98,7 @@ class TestVarianceThresholdSelector:
 
         # Features with zero variance should be removed
         assert "low_var_1" not in selector.selected_features_  # Constant
-        assert "zero_var" not in selector.selected_features_    # Zero variance
+        assert "zero_var" not in selector.selected_features_  # Zero variance
 
     def test_threshold_filtering(
         self, sample_data_with_low_variance: tuple[pd.DataFrame, pd.Series]
@@ -145,9 +145,7 @@ class TestVarianceThresholdSelector:
         assert X_transformed.shape[1] <= X.shape[1]
         assert hasattr(selector, "selected_features_")
 
-    def test_get_support(
-        self, sample_classification_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_get_support(self, sample_classification_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test get_support returns boolean mask."""
         X, y = sample_classification_data
         selector = VarianceThresholdSelector(threshold=0.5)
@@ -192,9 +190,7 @@ class TestVarianceThresholdSelector:
         with pytest.raises(ValueError, match="threshold must be non-negative"):
             VarianceThresholdSelector(threshold=-0.1)
 
-    def test_get_result(
-        self, sample_classification_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_get_result(self, sample_classification_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test get_result returns FeatureSelectorResult."""
         X, y = sample_classification_data
         selector = VarianceThresholdSelector(threshold=0.5)
@@ -207,8 +203,10 @@ class TestVarianceThresholdSelector:
         assert len(result.feature_scores) == len(selector.selected_features_)
         assert result.method_name == "VarianceThresholdSelector"
         # Scores should be variances (sorted descending)
-        assert all(result.feature_scores[i] >= result.feature_scores[i + 1]
-                   for i in range(len(result.feature_scores) - 1))
+        assert all(
+            result.feature_scores[i] >= result.feature_scores[i + 1]
+            for i in range(len(result.feature_scores) - 1)
+        )
 
     def test_n_features_to_select_limit(
         self, sample_classification_data: tuple[pd.DataFrame, pd.Series]
@@ -224,11 +222,13 @@ class TestVarianceThresholdSelector:
     def test_all_features_removed_handling(self) -> None:
         """Test handling when all features have variance below threshold."""
         # Create data where all features have very low variance
-        X = pd.DataFrame({
-            "f1": np.ones(100) * 5,
-            "f2": np.ones(100) * 3,
-            "f3": np.zeros(100),
-        })
+        X = pd.DataFrame(
+            {
+                "f1": np.ones(100) * 5,
+                "f2": np.ones(100) * 3,
+                "f3": np.zeros(100),
+            }
+        )
         y = pd.Series(np.random.binomial(1, 0.5, 100))
 
         selector = VarianceThresholdSelector(threshold=0.0)
@@ -255,11 +255,13 @@ class TestVarianceThresholdSelector:
     def test_variance_calculation_correctness(self) -> None:
         """Test that calculated variances match expected values."""
         # Create data with known variances
-        X = pd.DataFrame({
-            "f1": [1, 2, 3, 4, 5],      # var = 2.5
-            "f2": [1, 1, 1, 1, 1],      # var = 0
-            "f3": [1, 3, 5, 7, 9],      # var = 10
-        })
+        X = pd.DataFrame(
+            {
+                "f1": [1, 2, 3, 4, 5],  # var = 2.5
+                "f2": [1, 1, 1, 1, 1],  # var = 0
+                "f3": [1, 3, 5, 7, 9],  # var = 10
+            }
+        )
         y = pd.Series([0, 1, 0, 1, 0])
 
         selector = VarianceThresholdSelector(threshold=0.0)

@@ -206,14 +206,10 @@ class SignificanceSelector(BaseFeatureSelector):
         super().__init__(verbose=verbose)
 
         if method not in self.VALID_METHODS:
-            raise ValueError(
-                f"method must be one of {self.VALID_METHODS}, got '{method}'"
-            )
+            raise ValueError(f"method must be one of {self.VALID_METHODS}, got '{method}'")
 
         if method.startswith("sigtop") and n_features_to_select is None:
-            raise ValueError(
-                f"n_features_to_select must be provided for method '{method}'"
-            )
+            raise ValueError(f"n_features_to_select must be provided for method '{method}'")
 
         self.method = method
         self.alpha = alpha
@@ -249,26 +245,16 @@ class SignificanceSelector(BaseFeatureSelector):
         correction_method = self._get_correction_method()
 
         if correction_method == "fdr_bh":
-            rejected, p_corrected = _multipletests_bh(
-                self.p_values_.values, self.alpha
-            )
+            rejected, p_corrected = _multipletests_bh(self.p_values_.values, self.alpha)
         elif correction_method == "bonferroni":
-            rejected, p_corrected = _multipletests_bonferroni(
-                self.p_values_.values, self.alpha
-            )
+            rejected, p_corrected = _multipletests_bonferroni(self.p_values_.values, self.alpha)
         elif correction_method == "holm":
-            rejected, p_corrected = _multipletests_holm(
-                self.p_values_.values, self.alpha
-            )
+            rejected, p_corrected = _multipletests_holm(self.p_values_.values, self.alpha)
         else:
             # Default to BH
-            rejected, p_corrected = _multipletests_bh(
-                self.p_values_.values, self.alpha
-            )
+            rejected, p_corrected = _multipletests_bh(self.p_values_.values, self.alpha)
 
-        self.p_values_corrected_ = pd.Series(
-            p_corrected, index=self.p_values_.index
-        )
+        self.p_values_corrected_ = pd.Series(p_corrected, index=self.p_values_.index)
 
         # Select features based on method
         if self.method == "sig":
@@ -288,11 +274,7 @@ class SignificanceSelector(BaseFeatureSelector):
             sorted_indices = np.argsort(self.p_values_corrected_.values)
 
             # Take top N that are significant
-            n_select = min(
-                self.n_features_to_select,
-                np.sum(rejected),
-                len(X.columns)
-            )
+            n_select = min(self.n_features_to_select, np.sum(rejected), len(X.columns))
 
             # If not enough significant features, take top N by p-value anyway
             if n_select < self.n_features_to_select:
@@ -524,8 +506,7 @@ class FoldChangeSelector(BaseFeatureSelector):
         classes = np.unique(y)
         if len(classes) != 2:
             raise ValueError(
-                f"FoldChangeSelector requires binary classification, "
-                f"got {len(classes)} classes"
+                f"FoldChangeSelector requires binary classification, " f"got {len(classes)} classes"
             )
 
         # Compute fold-changes

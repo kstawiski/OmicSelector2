@@ -68,14 +68,10 @@ if SQLALCHEMY_AVAILABLE:
 
         __tablename__ = "datasets"
 
-        id = Column(
-            UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True
-        )
+        id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
         name = Column(String(255), nullable=False)
         description = Column(Text, nullable=True)
-        data_type = Column(
-            ENUM(DataType, name="data_type", create_type=True), nullable=False
-        )
+        data_type = Column(ENUM(DataType, name="data_type", create_type=True), nullable=False)
         file_path = Column(String(500), nullable=True)  # S3/MinIO path
         n_samples = Column(Integer, nullable=True)
         n_features = Column(Integer, nullable=True)
@@ -85,9 +81,7 @@ if SQLALCHEMY_AVAILABLE:
         owner_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
 
         # Timestamps
-        created_at = Column(
-            DateTime(timezone=True), server_default=func.now(), nullable=False
-        )
+        created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
         # Relationships
         owner = relationship("User", back_populates="datasets")

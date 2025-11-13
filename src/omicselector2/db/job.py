@@ -85,12 +85,8 @@ if SQLALCHEMY_AVAILABLE:
 
         __tablename__ = "jobs"
 
-        id = Column(
-            UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True
-        )
-        job_type = Column(
-            ENUM(JobType, name="job_type", create_type=True), nullable=False
-        )
+        id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+        job_type = Column(ENUM(JobType, name="job_type", create_type=True), nullable=False)
         status = Column(
             ENUM(JobStatus, name="job_status", create_type=True),
             default=JobStatus.PENDING,
@@ -104,9 +100,7 @@ if SQLALCHEMY_AVAILABLE:
 
         # Foreign keys
         user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-        dataset_id = Column(
-            UUID(as_uuid=True), ForeignKey("datasets.id"), nullable=False
-        )
+        dataset_id = Column(UUID(as_uuid=True), ForeignKey("datasets.id"), nullable=False)
 
         # Execution details
         started_at = Column(DateTime(timezone=True), nullable=True)
@@ -114,14 +108,10 @@ if SQLALCHEMY_AVAILABLE:
         error_message = Column(Text, nullable=True)
 
         # Result reference
-        result_id = Column(
-            UUID(as_uuid=True), ForeignKey("results.id"), nullable=True
-        )
+        result_id = Column(UUID(as_uuid=True), ForeignKey("results.id"), nullable=True)
 
         # Timestamps
-        created_at = Column(
-            DateTime(timezone=True), server_default=func.now(), nullable=False
-        )
+        created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
         # Relationships
         user = relationship("User", back_populates="jobs")
@@ -131,7 +121,7 @@ if SQLALCHEMY_AVAILABLE:
             back_populates="job",
             uselist=False,
             foreign_keys="[Result.job_id]",
-            primaryjoin="Job.id == Result.job_id"
+            primaryjoin="Job.id == Result.job_id",
         )
 
         def __repr__(self) -> str:

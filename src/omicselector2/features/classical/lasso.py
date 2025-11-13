@@ -69,15 +69,15 @@ class LassoSelector(BaseFeatureSelector):
 
     def __init__(
         self,
-        alpha: Union[float, Literal['auto']] = 1.0,
-        task: Literal['regression', 'classification'] = 'regression',
+        alpha: Union[float, Literal["auto"]] = 1.0,
+        task: Literal["regression", "classification"] = "regression",
         cv: int = 5,
         max_iter: int = 10000,
         tol: float = 1e-4,
         n_features_to_select: Optional[int] = None,
         random_state: Optional[int] = None,
         verbose: bool = False,
-        standardize: bool = True
+        standardize: bool = True,
     ) -> None:
         """Initialize Lasso feature selector.
 
@@ -96,18 +96,14 @@ class LassoSelector(BaseFeatureSelector):
             ValueError: If alpha is not positive or task is invalid.
         """
         super().__init__(
-            n_features_to_select=n_features_to_select,
-            random_state=random_state,
-            verbose=verbose
+            n_features_to_select=n_features_to_select, random_state=random_state, verbose=verbose
         )
 
         if isinstance(alpha, (int, float)) and alpha <= 0:
             raise ValueError(f"alpha must be positive, got {alpha}")
 
-        if task not in ['regression', 'classification']:
-            raise ValueError(
-                f"task must be 'regression' or 'classification', got {task}"
-            )
+        if task not in ["regression", "classification"]:
+            raise ValueError(f"task must be 'regression' or 'classification', got {task}")
 
         self.alpha = alpha
         self.task = task
@@ -142,14 +138,10 @@ class LassoSelector(BaseFeatureSelector):
         X_scaled = X.copy()
         if self.standardize:
             self.scaler_ = StandardScaler()
-            X_scaled = pd.DataFrame(
-                self.scaler_.fit_transform(X),
-                columns=X.columns,
-                index=X.index
-            )
+            X_scaled = pd.DataFrame(self.scaler_.fit_transform(X), columns=X.columns, index=X.index)
 
         # Fit model based on task type
-        if self.task == 'regression':
+        if self.task == "regression":
             self._fit_regression(X_scaled, y)
         else:
             self._fit_classification(X_scaled, y)
@@ -169,14 +161,14 @@ class LassoSelector(BaseFeatureSelector):
             X: Scaled feature matrix.
             y: Target variable.
         """
-        if self.alpha == 'auto':
+        if self.alpha == "auto":
             # Use cross-validation to find optimal alpha
             self.model_ = LassoCV(
                 cv=self.cv,
                 max_iter=self.max_iter,
                 tol=self.tol,
                 random_state=self.random_state,
-                n_jobs=-1
+                n_jobs=-1,
             )
             self.model_.fit(X, y)
             self.alpha_ = self.model_.alpha_
@@ -186,7 +178,7 @@ class LassoSelector(BaseFeatureSelector):
                 alpha=self.alpha,
                 max_iter=self.max_iter,
                 tol=self.tol,
-                random_state=self.random_state
+                random_state=self.random_state,
             )
             self.model_.fit(X, y)
             self.alpha_ = self.alpha
@@ -198,7 +190,7 @@ class LassoSelector(BaseFeatureSelector):
             X: Scaled feature matrix.
             y: Target variable.
         """
-        if self.alpha == 'auto':
+        if self.alpha == "auto":
             # Use cross-validation to find optimal C (inverse of alpha)
             from sklearn.model_selection import cross_val_score
 
@@ -209,12 +201,12 @@ class LassoSelector(BaseFeatureSelector):
 
             for C in C_values:
                 model = LogisticRegression(
-                    penalty='l1',
+                    penalty="l1",
                     C=C,
-                    solver='liblinear',
+                    solver="liblinear",
                     max_iter=self.max_iter,
                     tol=self.tol,
-                    random_state=self.random_state
+                    random_state=self.random_state,
                 )
                 scores = cross_val_score(model, X, y, cv=self.cv, n_jobs=-1)
                 mean_score = scores.mean()
@@ -225,12 +217,12 @@ class LassoSelector(BaseFeatureSelector):
 
             # Fit final model with best C
             self.model_ = LogisticRegression(
-                penalty='l1',
+                penalty="l1",
                 C=best_C,
-                solver='liblinear',
+                solver="liblinear",
                 max_iter=self.max_iter,
                 tol=self.tol,
-                random_state=self.random_state
+                random_state=self.random_state,
             )
             self.model_.fit(X, y)
             self.alpha_ = 1.0 / best_C
@@ -238,12 +230,12 @@ class LassoSelector(BaseFeatureSelector):
             # Use fixed alpha (convert to C)
             C = 1.0 / self.alpha
             self.model_ = LogisticRegression(
-                penalty='l1',
+                penalty="l1",
                 C=C,
-                solver='liblinear',
+                solver="liblinear",
                 max_iter=self.max_iter,
                 tol=self.tol,
-                random_state=self.random_state
+                random_state=self.random_state,
             )
             self.model_.fit(X, y)
             self.alpha_ = self.alpha
@@ -255,7 +247,7 @@ class LassoSelector(BaseFeatureSelector):
             X: Original feature matrix (for column names).
         """
         # Get coefficients
-        if hasattr(self.model_, 'coef_'):
+        if hasattr(self.model_, "coef_"):
             # For both Lasso and LogisticRegression
             coef = self.model_.coef_
             if coef.ndim > 1:

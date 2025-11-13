@@ -35,8 +35,7 @@ def sample_classification_data() -> tuple[pd.DataFrame, pd.Series]:
 
     # Create target with feature interactions
     y = pd.Series(
-        ((X["feature_0"] > 0) & (X["feature_1"] > 0) |
-         (X["feature_2"] < -0.5)).astype(int)
+        ((X["feature_0"] > 0) & (X["feature_1"] > 0) | (X["feature_2"] < -0.5)).astype(int)
     )
 
     return X, y
@@ -56,8 +55,9 @@ def sample_regression_data() -> tuple[pd.DataFrame, pd.Series]:
     )
 
     weights = np.random.rand(n_informative) * 2
-    y = pd.Series((X.iloc[:, :n_informative] * weights).sum(axis=1) +
-                  np.random.randn(n_samples) * 0.5)
+    y = pd.Series(
+        (X.iloc[:, :n_informative] * weights).sum(axis=1) + np.random.randn(n_samples) * 0.5
+    )
 
     return X, y
 
@@ -91,9 +91,7 @@ class TestReliefFSelector:
         assert hasattr(selector, "feature_scores_")
         assert len(selector.selected_features_) == 15
 
-    def test_fit_regression(
-        self, sample_regression_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_fit_regression(self, sample_regression_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test fit method for regression task."""
         X, y = sample_regression_data
         selector = ReliefFSelector(task="regression", n_features_to_select=20)
@@ -104,9 +102,7 @@ class TestReliefFSelector:
         assert selector.task == "regression"
         assert len(selector.selected_features_) == 20
 
-    def test_transform(
-        self, sample_classification_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_transform(self, sample_classification_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test transform returns DataFrame with selected features."""
         X, y = sample_classification_data
         selector = ReliefFSelector(n_features_to_select=20)
@@ -132,9 +128,7 @@ class TestReliefFSelector:
         assert X_transformed.shape[1] == 15
         assert hasattr(selector, "selected_features_")
 
-    def test_get_support(
-        self, sample_classification_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_get_support(self, sample_classification_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test get_support returns boolean mask."""
         X, y = sample_classification_data
         selector = ReliefFSelector(n_features_to_select=25)
@@ -192,9 +186,7 @@ class TestReliefFSelector:
         with pytest.raises(ValueError, match="task must be 'regression' or 'classification'"):
             ReliefFSelector(task="invalid")
 
-    def test_get_result(
-        self, sample_classification_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_get_result(self, sample_classification_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test get_result returns FeatureSelectorResult."""
         X, y = sample_classification_data
         selector = ReliefFSelector(n_features_to_select=20)
@@ -233,8 +225,10 @@ class TestReliefFSelector:
         selector.fit(X, y)
 
         # Scores should be in descending order
-        assert all(selector.feature_scores_[i] >= selector.feature_scores_[i + 1]
-                   for i in range(len(selector.feature_scores_) - 1))
+        assert all(
+            selector.feature_scores_[i] >= selector.feature_scores_[i + 1]
+            for i in range(len(selector.feature_scores_) - 1)
+        )
 
     def test_handles_small_datasets(self) -> None:
         """Test ReliefF handles small datasets gracefully."""

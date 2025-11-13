@@ -102,9 +102,7 @@ else:
     router = APIRouter()
 
     @router.post("/register", response_model=UserResponse, status_code=201)
-    async def register(
-        user_data: UserRegisterRequest, db: Session = Depends(get_db)
-    ):
+    async def register(user_data: UserRegisterRequest, db: Session = Depends(get_db)):
         """Register a new user.
 
         Args:
@@ -126,9 +124,7 @@ else:
         # Check if user already exists
         existing_user = (
             db.query(User)
-            .filter(
-                (User.email == user_data.email) | (User.username == user_data.username)
-            )
+            .filter((User.email == user_data.email) | (User.username == user_data.username))
             .first()
         )
 
@@ -192,10 +188,7 @@ else:
         # Find user by username or email
         user = (
             db.query(User)
-            .filter(
-                (User.username == credentials.username)
-                | (User.email == credentials.username)
-            )
+            .filter((User.username == credentials.username) | (User.email == credentials.username))
             .first()
         )
 

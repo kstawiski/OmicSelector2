@@ -99,9 +99,9 @@ class TestDatasetUpload:
                 data={
                     "name": "Test Dataset",
                     "data_type": "bulk_rna_seq",
-                    "description": "Test description"
+                    "description": "Test description",
                 },
-                files={"file": ("test_data.csv", test_file, "text/csv")}
+                files={"file": ("test_data.csv", test_file, "text/csv")},
             )
 
         app.dependency_overrides.clear()
@@ -133,7 +133,7 @@ class TestDatasetUpload:
                 "name": "Test Dataset",
                 "data_type": "invalid_type",  # Invalid
             },
-            files={"file": ("test.csv", test_file, "text/csv")}
+            files={"file": ("test.csv", test_file, "text/csv")},
         )
 
         app.dependency_overrides.clear()
@@ -166,7 +166,7 @@ class TestDatasetUpload:
                     "name": "Test Dataset",
                     "data_type": "bulk_rna_seq",
                 },
-                files={"file": ("test.csv", test_file, "text/csv")}
+                files={"file": ("test.csv", test_file, "text/csv")},
             )
 
         app.dependency_overrides.clear()
@@ -185,7 +185,7 @@ class TestDatasetUpload:
                 "name": "Test Dataset",
                 "data_type": "bulk_rna_seq",
             },
-            files={"file": ("test.csv", test_file, "text/csv")}
+            files={"file": ("test.csv", test_file, "text/csv")},
         )
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -288,8 +288,8 @@ class TestListDatasets:
         for i in range(3):
             dataset = Mock(spec=Dataset)
             dataset.id = uuid4()
-            dataset.name = f"Dataset {i+1}"
-            dataset.description = f"Description {i+1}"
+            dataset.name = f"Dataset {i + 1}"
+            dataset.description = f"Description {i + 1}"
             dataset.data_type = DataType.BULK_RNA_SEQ
             dataset.file_path = f"s3://bucket/dataset{i}"
             dataset.n_samples = 100 + i
@@ -473,7 +473,7 @@ class TestDataEndpointsIntegration:
             upload_response = test_client.post(
                 "/api/v1/data/upload",
                 data={"name": "Lifecycle Test", "data_type": "bulk_rna_seq"},
-                files={"file": ("test.csv", test_file, "text/csv")}
+                files={"file": ("test.csv", test_file, "text/csv")},
             )
 
         assert upload_response.status_code == status.HTTP_201_CREATED

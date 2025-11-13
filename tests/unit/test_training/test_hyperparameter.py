@@ -194,9 +194,7 @@ class TestHyperparameterOptimization:
 
     def test_get_best_params_before_optimize_raises_error(self) -> None:
         """Test that calling get_best_params before optimize raises error."""
-        optimizer = HyperparameterOptimizer(
-            model_name="RandomForest", n_trials=2, cv_folds=2
-        )
+        optimizer = HyperparameterOptimizer(model_name="RandomForest", n_trials=2, cv_folds=2)
 
         with pytest.raises(RuntimeError, match="optimize.*must be called first"):
             optimizer.get_best_params()
@@ -250,7 +248,7 @@ class TestCustomSearchSpace:
             random_state=42,
         )
 
-        study = optimizer.optimize(X, y)
+        optimizer.optimize(X, y)
         best_params = optimizer.get_best_params()
 
         # Parameters should be within custom ranges

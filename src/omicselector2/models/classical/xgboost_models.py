@@ -30,7 +30,6 @@ Examples:
 
 from typing import Literal, Optional
 
-import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 from xgboost import XGBClassifier, XGBRegressor
@@ -188,9 +187,7 @@ class XGBoostClassifier(BaseClassifier):
         """
         self._check_is_fitted()
 
-        importance_dict = self.model_.get_booster().get_score(
-            importance_type=importance_type
-        )
+        importance_dict = self.model_.get_booster().get_score(importance_type=importance_type)
 
         # Create series with zeros for all features
         importance = pd.Series(0.0, index=self.feature_names_)
@@ -343,9 +340,7 @@ class XGBoostRegressor(BaseRegressor):
         """
         self._check_is_fitted()
 
-        importance_dict = self.model_.get_booster().get_score(
-            importance_type=importance_type
-        )
+        importance_dict = self.model_.get_booster().get_score(importance_type=importance_type)
 
         # Create series with zeros for all features
         importance = pd.Series(0.0, index=self.feature_names_)

@@ -18,15 +18,11 @@ def sample_regression_data() -> tuple[pd.DataFrame, pd.Series]:
 
     # Create data with some informative features
     X = pd.DataFrame(
-        np.random.randn(n_samples, n_features),
-        columns=[f"feature_{i}" for i in range(n_features)]
+        np.random.randn(n_samples, n_features), columns=[f"feature_{i}" for i in range(n_features)]
     )
 
     # Create target with dependencies on first 10 features
-    y = pd.Series(
-        X.iloc[:, :10].sum(axis=1) + np.random.randn(n_samples) * 0.1,
-        name="target"
-    )
+    y = pd.Series(X.iloc[:, :10].sum(axis=1) + np.random.randn(n_samples) * 0.1, name="target")
 
     return X, y
 
@@ -43,16 +39,12 @@ def sample_classification_data() -> tuple[pd.DataFrame, pd.Series]:
     n_features = 100
 
     X = pd.DataFrame(
-        np.random.randn(n_samples, n_features),
-        columns=[f"feature_{i}" for i in range(n_features)]
+        np.random.randn(n_samples, n_features), columns=[f"feature_{i}" for i in range(n_features)]
     )
 
     # Create binary target
     linear_combo = X.iloc[:, :10].sum(axis=1)
-    y = pd.Series(
-        (linear_combo > linear_combo.median()).astype(int),
-        name="target"
-    )
+    y = pd.Series((linear_combo > linear_combo.median()).astype(int), name="target")
 
     return X, y
 
@@ -74,7 +66,7 @@ class TestElasticNetSelector:
 
         assert selector.alpha == 1.0
         assert selector.l1_ratio == 0.5
-        assert selector.task == 'regression'
+        assert selector.task == "regression"
         assert selector.cv == 5
         assert selector.max_iter == 10000
         assert selector.tol == 1e-4
@@ -87,15 +79,15 @@ class TestElasticNetSelector:
         selector = ElasticNetSelector(
             alpha=0.1,
             l1_ratio=0.7,
-            task='classification',
+            task="classification",
             cv=10,
             n_features_to_select=50,
-            random_state=42
+            random_state=42,
         )
 
         assert selector.alpha == 0.1
         assert selector.l1_ratio == 0.7
-        assert selector.task == 'classification'
+        assert selector.task == "classification"
         assert selector.cv == 10
         assert selector.n_features_to_select == 50
         assert selector.random_state == 42
@@ -125,14 +117,14 @@ class TestElasticNetSelector:
         from omicselector2.features.classical.elastic_net import ElasticNetSelector
 
         with pytest.raises(ValueError, match="task must be"):
-            ElasticNetSelector(task='invalid_task')
+            ElasticNetSelector(task="invalid_task")
 
     def test_fit_regression(self, sample_regression_data: tuple) -> None:
         """Test that ElasticNetSelector can be fitted for regression."""
         from omicselector2.features.classical.elastic_net import ElasticNetSelector
 
         X, y = sample_regression_data
-        selector = ElasticNetSelector(alpha=0.01, l1_ratio=0.5, task='regression')
+        selector = ElasticNetSelector(alpha=0.01, l1_ratio=0.5, task="regression")
 
         result = selector.fit(X, y)
 
@@ -154,10 +146,7 @@ class TestElasticNetSelector:
 
         X, y = sample_classification_data
         selector = ElasticNetSelector(
-            alpha=0.01,
-            l1_ratio=0.5,
-            task='classification',
-            max_iter=5000
+            alpha=0.01, l1_ratio=0.5, task="classification", max_iter=5000
         )
 
         result = selector.fit(X, y)
@@ -177,7 +166,7 @@ class TestElasticNetSelector:
         from omicselector2.features.classical.elastic_net import ElasticNetSelector
 
         X, y = sample_regression_data
-        selector = ElasticNetSelector(alpha='auto', l1_ratio=0.5, cv=3)
+        selector = ElasticNetSelector(alpha="auto", l1_ratio=0.5, cv=3)
 
         selector.fit(X, y)
 
@@ -191,7 +180,7 @@ class TestElasticNetSelector:
         from omicselector2.features.classical.elastic_net import ElasticNetSelector
 
         X, y = sample_regression_data
-        selector = ElasticNetSelector(alpha=0.01, l1_ratio='auto', cv=3)
+        selector = ElasticNetSelector(alpha=0.01, l1_ratio="auto", cv=3)
 
         selector.fit(X, y)
 
@@ -207,11 +196,7 @@ class TestElasticNetSelector:
 
         X, y = sample_classification_data
         selector = ElasticNetSelector(
-            alpha='auto',
-            l1_ratio=0.5,
-            task='classification',
-            cv=3,
-            max_iter=3000
+            alpha="auto", l1_ratio=0.5, task="classification", cv=3, max_iter=3000
         )
 
         selector.fit(X, y)

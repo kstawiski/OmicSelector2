@@ -18,15 +18,11 @@ def sample_regression_data() -> tuple[pd.DataFrame, pd.Series]:
 
     # Create data with some informative features
     X = pd.DataFrame(
-        np.random.randn(n_samples, n_features),
-        columns=[f"feature_{i}" for i in range(n_features)]
+        np.random.randn(n_samples, n_features), columns=[f"feature_{i}" for i in range(n_features)]
     )
 
     # Create target with dependencies on first 10 features
-    y = pd.Series(
-        X.iloc[:, :10].sum(axis=1) + np.random.randn(n_samples) * 0.1,
-        name="target"
-    )
+    y = pd.Series(X.iloc[:, :10].sum(axis=1) + np.random.randn(n_samples) * 0.1, name="target")
 
     return X, y
 
@@ -43,16 +39,12 @@ def sample_classification_data() -> tuple[pd.DataFrame, pd.Series]:
     n_features = 100
 
     X = pd.DataFrame(
-        np.random.randn(n_samples, n_features),
-        columns=[f"feature_{i}" for i in range(n_features)]
+        np.random.randn(n_samples, n_features), columns=[f"feature_{i}" for i in range(n_features)]
     )
 
     # Create binary target with non-linear dependencies
     linear_combo = X.iloc[:, :10].sum(axis=1)
-    y = pd.Series(
-        (linear_combo > linear_combo.median()).astype(int),
-        name="target"
-    )
+    y = pd.Series((linear_combo > linear_combo.median()).astype(int), name="target")
 
     return X, y
 
@@ -76,8 +68,8 @@ class TestRandomForestSelector:
         assert selector.max_depth is None
         assert selector.min_samples_split == 2
         assert selector.min_samples_leaf == 1
-        assert selector.task == 'classification'
-        assert selector.importance_type == 'gini'
+        assert selector.task == "classification"
+        assert selector.importance_type == "gini"
         assert selector.n_jobs == -1
 
     def test_initialization_custom_parameters(self) -> None:
@@ -88,17 +80,17 @@ class TestRandomForestSelector:
             n_estimators=200,
             max_depth=10,
             min_samples_split=5,
-            task='regression',
-            importance_type='permutation',
+            task="regression",
+            importance_type="permutation",
             n_features_to_select=50,
-            random_state=42
+            random_state=42,
         )
 
         assert selector.n_estimators == 200
         assert selector.max_depth == 10
         assert selector.min_samples_split == 5
-        assert selector.task == 'regression'
-        assert selector.importance_type == 'permutation'
+        assert selector.task == "regression"
+        assert selector.importance_type == "permutation"
         assert selector.n_features_to_select == 50
         assert selector.random_state == 42
 
@@ -117,14 +109,14 @@ class TestRandomForestSelector:
         from omicselector2.features.classical.random_forest import RandomForestSelector
 
         with pytest.raises(ValueError, match="task must be"):
-            RandomForestSelector(task='invalid_task')
+            RandomForestSelector(task="invalid_task")
 
     def test_invalid_importance_type_raises_error(self) -> None:
         """Test that invalid importance_type raises ValueError."""
         from omicselector2.features.classical.random_forest import RandomForestSelector
 
         with pytest.raises(ValueError, match="importance_type must be"):
-            RandomForestSelector(importance_type='invalid_type')
+            RandomForestSelector(importance_type="invalid_type")
 
     def test_fit_classification(self, sample_classification_data: tuple) -> None:
         """Test that RandomForestSelector can be fitted for classification."""
@@ -132,9 +124,7 @@ class TestRandomForestSelector:
 
         X, y = sample_classification_data
         selector = RandomForestSelector(
-            n_estimators=50,
-            task='classification',
-            n_features_to_select=20
+            n_estimators=50, task="classification", n_features_to_select=20
         )
 
         result = selector.fit(X, y)
@@ -155,11 +145,7 @@ class TestRandomForestSelector:
         from omicselector2.features.classical.random_forest import RandomForestSelector
 
         X, y = sample_regression_data
-        selector = RandomForestSelector(
-            n_estimators=50,
-            task='regression',
-            n_features_to_select=20
-        )
+        selector = RandomForestSelector(n_estimators=50, task="regression", n_features_to_select=20)
 
         result = selector.fit(X, y)
 
@@ -179,9 +165,7 @@ class TestRandomForestSelector:
 
         X, y = sample_classification_data
         selector = RandomForestSelector(
-            n_estimators=50,
-            importance_type='gini',
-            n_features_to_select=15
+            n_estimators=50, importance_type="gini", n_features_to_select=15
         )
 
         selector.fit(X, y)
@@ -197,8 +181,8 @@ class TestRandomForestSelector:
         X, y = sample_classification_data
         selector = RandomForestSelector(
             n_estimators=30,  # Fewer estimators for speed
-            importance_type='permutation',
-            n_features_to_select=15
+            importance_type="permutation",
+            n_features_to_select=15,
         )
 
         selector.fit(X, y)
@@ -326,9 +310,7 @@ class TestRandomForestSelector:
 
         X, y = sample_classification_data
         selector = RandomForestSelector(
-            n_estimators=50,
-            importance_type='gini',
-            n_features_to_select=15
+            n_estimators=50, importance_type="gini", n_features_to_select=15
         )
 
         selector.fit(X, y)
@@ -374,9 +356,7 @@ class TestRandomForestSelector:
 
         X, y = sample_regression_data
         selector = RandomForestSelector(
-            n_estimators=100,
-            task='regression',
-            n_features_to_select=20
+            n_estimators=100, task="regression", n_features_to_select=20
         )
 
         selector.fit(X, y)
@@ -410,23 +390,21 @@ class TestRandomForestSelector:
         """Test string representation."""
         from omicselector2.features.classical.random_forest import RandomForestSelector
 
-        selector1 = RandomForestSelector(n_estimators=100, task='classification')
+        selector1 = RandomForestSelector(n_estimators=100, task="classification")
         repr1 = repr(selector1)
 
-        assert 'RandomForestSelector' in repr1
-        assert 'n_estimators=100' in repr1
+        assert "RandomForestSelector" in repr1
+        assert "n_estimators=100" in repr1
         assert "task='classification'" in repr1
 
         selector2 = RandomForestSelector(
-            n_estimators=200,
-            task='regression',
-            n_features_to_select=50
+            n_estimators=200, task="regression", n_features_to_select=50
         )
         repr2 = repr(selector2)
 
-        assert 'n_estimators=200' in repr2
+        assert "n_estimators=200" in repr2
         assert "task='regression'" in repr2
-        assert 'n_features_to_select=50' in repr2
+        assert "n_features_to_select=50" in repr2
 
     def test_max_depth_parameter(self, sample_classification_data: tuple) -> None:
         """Test that max_depth parameter affects model."""
@@ -436,17 +414,13 @@ class TestRandomForestSelector:
 
         # Shallow trees
         selector_shallow = RandomForestSelector(
-            n_estimators=50,
-            max_depth=3,
-            n_features_to_select=15
+            n_estimators=50, max_depth=3, n_features_to_select=15
         )
         selector_shallow.fit(X, y)
 
         # Deep trees
         selector_deep = RandomForestSelector(
-            n_estimators=50,
-            max_depth=None,  # No limit
-            n_features_to_select=15
+            n_estimators=50, max_depth=None, n_features_to_select=15  # No limit
         )
         selector_deep.fit(X, y)
 
@@ -461,9 +435,7 @@ class TestRandomForestSelector:
         X, y = sample_classification_data
 
         selector = RandomForestSelector(
-            n_estimators=50,
-            min_samples_split=10,
-            n_features_to_select=15
+            n_estimators=50, min_samples_split=10, n_features_to_select=15
         )
         selector.fit(X, y)
 

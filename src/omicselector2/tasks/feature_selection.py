@@ -4,14 +4,14 @@ This module provides Celery tasks for running feature selection jobs.
 """
 
 import logging
-from datetime import datetime
-from typing import Optional
+from datetime import datetime, timezone
 from uuid import UUID
 
 logger = logging.getLogger(__name__)
 
 try:
     from omicselector2.tasks import celery_app
+
     CELERY_AVAILABLE = True
 except ImportError:
     CELERY_AVAILABLE = False
@@ -20,11 +20,11 @@ except ImportError:
 try:
     import pandas as pd
     import numpy as np
-    from sklearn.linear_model import LassoCV, ElasticNetCV, RidgeCV, LogisticRegression
+    from sklearn.linear_model import LassoCV, ElasticNetCV, LogisticRegression
     from sklearn.svm import LinearSVC
     from sklearn.ensemble import RandomForestClassifier
     from sklearn.preprocessing import StandardScaler
-    from sklearn.feature_selection import VarianceThreshold as SKVarianceThreshold
+
     SKLEARN_AVAILABLE = True
 except ImportError:
     SKLEARN_AVAILABLE = False
@@ -32,6 +32,7 @@ except ImportError:
 
 try:
     from xgboost import XGBClassifier
+
     XGBOOST_AVAILABLE = True
 except ImportError:
     XGBOOST_AVAILABLE = False
@@ -40,13 +41,16 @@ except ImportError:
 try:
     from lifelines import CoxPHFitter
     from lifelines.utils import concordance_index
+
     LIFELINES_AVAILABLE = True
 except ImportError:
     LIFELINES_AVAILABLE = False
     logger.warning("lifelines not available - Cox PH feature selection will not work")
 
 
-def run_lasso_feature_selection(X: "pd.DataFrame", y: "pd.Series", cv: int = 5, n_features: int = 100) -> tuple[list[str], dict]:
+def run_lasso_feature_selection(
+    X: "pd.DataFrame", y: "pd.Series", cv: int = 5, n_features: int = 100
+) -> tuple[list[str], dict]:
     """Run Lasso feature selection with cross-validation.
 
     Args:
@@ -86,7 +90,7 @@ def run_lasso_feature_selection(X: "pd.DataFrame", y: "pd.Series", cv: int = 5, 
     if len(selected_features) > 0:
         X_selected = X[selected_features]
         lr = LogisticRegression(random_state=42, max_iter=1000)
-        cv_scores = cross_val_score(lr, X_selected, y, cv=cv, scoring='roc_auc')
+        cv_scores = cross_val_score(lr, X_selected, y, cv=cv, scoring="roc_auc")
 
         metrics = {
             "method": "lasso",
@@ -142,12 +146,10 @@ def run_randomforest_feature_selection(
     if len(selected_features) > 0:
         X_selected = X[selected_features]
         lr = LogisticRegression(random_state=42, max_iter=1000)
-        cv_scores = cross_val_score(lr, X_selected, y, cv=cv, scoring='roc_auc')
+        cv_scores = cross_val_score(lr, X_selected, y, cv=cv, scoring="roc_auc")
 
         # Store feature importances for top features
-        feature_importance_dict = {
-            X.columns[i]: float(importances[i]) for i in top_indices
-        }
+        feature_importance_dict = {X.columns[i]: float(importances[i]) for i in top_indices}
 
         metrics = {
             "method": "random_forest",
@@ -197,7 +199,7 @@ def run_elasticnet_feature_selection(
         cv=cv,
         random_state=42,
         max_iter=10000,
-        n_jobs=-1
+        n_jobs=-1,
     )
     elasticnet_cv.fit(X_scaled, y)
 
@@ -218,7 +220,7 @@ def run_elasticnet_feature_selection(
     if len(selected_features) > 0:
         X_selected = X[selected_features]
         lr = LogisticRegression(random_state=42, max_iter=1000)
-        cv_scores = cross_val_score(lr, X_selected, y, cv=cv, scoring='roc_auc')
+        cv_scores = cross_val_score(lr, X_selected, y, cv=cv, scoring="roc_auc")
 
         metrics = {
             "method": "elastic_net",
@@ -262,12 +264,7 @@ def run_xgboost_feature_selection(
         raise ImportError("scikit-learn is required for feature selection")
 
     # Train XGBoost to get feature importances
-    xgb = XGBClassifier(
-        n_estimators=100,
-        random_state=42,
-        n_jobs=-1,
-        eval_metric='logloss'
-    )
+    xgb = XGBClassifier(n_estimators=100, random_state=42, n_jobs=-1, eval_metric="logloss")
     xgb.fit(X, y)
 
     # Get feature importances (based on gain by default)
@@ -285,12 +282,10 @@ def run_xgboost_feature_selection(
     if len(selected_features) > 0:
         X_selected = X[selected_features]
         lr = LogisticRegression(random_state=42, max_iter=1000)
-        cv_scores = cross_val_score(lr, X_selected, y, cv=cv, scoring='roc_auc')
+        cv_scores = cross_val_score(lr, X_selected, y, cv=cv, scoring="roc_auc")
 
         # Store feature importances for top features
-        feature_importance_dict = {
-            X.columns[i]: float(importances[i]) for i in top_indices
-        }
+        feature_importance_dict = {X.columns[i]: float(importances[i]) for i in top_indices}
 
         metrics = {
             "method": "xgboost",
@@ -364,7 +359,7 @@ def run_variance_threshold_feature_selection(
     if len(selected_features) > 0:
         X_selected = X[selected_features]
         lr = LogisticRegression(random_state=42, max_iter=1000)
-        cv_scores = cross_val_score(lr, X_selected, y, cv=cv, scoring='roc_auc')
+        cv_scores = cross_val_score(lr, X_selected, y, cv=cv, scoring="roc_auc")
 
         metrics = {
             "method": "variance_threshold",
@@ -409,7 +404,9 @@ def run_ttest_feature_selection(
     # Check if binary classification
     unique_classes = y.unique()
     if len(unique_classes) != 2:
-        raise ValueError(f"t-test requires binary classification, found {len(unique_classes)} classes")
+        raise ValueError(
+            f"t-test requires binary classification, found {len(unique_classes)} classes"
+        )
 
     # Split data by class
     class0_mask = y == unique_classes[0]
@@ -432,9 +429,7 @@ def run_ttest_feature_selection(
     selected_features = [X.columns[i] for i in sorted_indices]
 
     # Create p-value dictionary for selected features
-    p_value_dict = {
-        X.columns[i]: float(p_values[i]) for i in sorted_indices
-    }
+    p_value_dict = {X.columns[i]: float(p_values[i]) for i in sorted_indices}
 
     # Calculate metrics
     from sklearn.model_selection import cross_val_score
@@ -444,7 +439,7 @@ def run_ttest_feature_selection(
     if len(selected_features) > 0:
         X_selected = X[selected_features]
         lr = LogisticRegression(random_state=42, max_iter=1000)
-        cv_scores = cross_val_score(lr, X_selected, y, cv=cv, scoring='roc_auc')
+        cv_scores = cross_val_score(lr, X_selected, y, cv=cv, scoring="roc_auc")
 
         metrics = {
             "method": "ttest",
@@ -493,15 +488,9 @@ def run_l1svm_feature_selection(
 
     # Try different C values
     C_range = [0.001, 0.01, 0.1, 1.0, 10.0]
-    svm = LinearSVC(penalty='l1', dual=False, random_state=42, max_iter=5000)
+    svm = LinearSVC(penalty="l1", dual=False, random_state=42, max_iter=5000)
 
-    grid_search = GridSearchCV(
-        svm,
-        param_grid={'C': C_range},
-        cv=cv,
-        scoring='roc_auc',
-        n_jobs=-1
-    )
+    grid_search = GridSearchCV(svm, param_grid={"C": C_range}, cv=cv, scoring="roc_auc", n_jobs=-1)
     grid_search.fit(X_scaled, y)
 
     # Get feature coefficients from best model
@@ -521,12 +510,12 @@ def run_l1svm_feature_selection(
     if len(selected_features) > 0:
         X_selected = X[selected_features]
         lr = LogisticRegression(random_state=42, max_iter=1000)
-        cv_scores = cross_val_score(lr, X_selected, y, cv=cv, scoring='roc_auc')
+        cv_scores = cross_val_score(lr, X_selected, y, cv=cv, scoring="roc_auc")
 
         metrics = {
             "method": "l1_svm",
             "n_features_selected": len(selected_features),
-            "optimal_C": float(grid_search.best_params_['C']),
+            "optimal_C": float(grid_search.best_params_["C"]),
             "cv_auc_mean": float(cv_scores.mean()),
             "cv_auc_std": float(cv_scores.std()),
             "cv_folds": cv,
@@ -585,7 +574,7 @@ def run_ridge_feature_selection(
     if len(selected_features) > 0:
         X_selected = X[selected_features]
         lr = LogisticRegression(random_state=42, max_iter=1000)
-        cv_scores = cross_val_score(lr, X_selected, y, cv=cv, scoring='roc_auc')
+        cv_scores = cross_val_score(lr, X_selected, y, cv=cv, scoring="roc_auc")
 
         metrics = {
             "method": "ridge",
@@ -627,7 +616,7 @@ def run_coxph_feature_selection(
     if not isinstance(y, pd.DataFrame):
         raise ValueError("y must be a DataFrame with 'time' and 'event' columns for Cox PH")
 
-    if 'time' not in y.columns or 'event' not in y.columns:
+    if "time" not in y.columns or "event" not in y.columns:
         raise ValueError("y must have 'time' and 'event' columns for survival analysis")
 
     # Calculate univariate Cox PH hazard ratios and p-values for each feature
@@ -638,22 +627,22 @@ def run_coxph_feature_selection(
     for col in X.columns:
         try:
             # Create dataframe with single feature + survival data
-            df_temp = pd.DataFrame({
-                'feature': X[col],
-                'time': y['time'],
-                'event': y['event']
-            })
+            df_temp = pd.DataFrame({"feature": X[col], "time": y["time"], "event": y["event"]})
 
             # Fit univariate Cox model
             cph = CoxPHFitter()
-            cph.fit(df_temp, duration_col='time', event_col='event')
+            cph.fit(df_temp, duration_col="time", event_col="event")
 
             # Get hazard ratio and p-value
-            hr = cph.hazard_ratios_['feature']
-            p_val = cph.summary['p']['feature']
+            hr = cph.hazard_ratios_["feature"]
+            p_val = cph.summary["p"]["feature"]
 
             # Calculate concordance index
-            c_index = concordance_index(y['time'], -cph.predict_partial_hazard(df_temp[['feature']]).values.flatten(), y['event'])
+            c_index = concordance_index(
+                y["time"],
+                -cph.predict_partial_hazard(df_temp[["feature"]]).values.flatten(),
+                y["event"],
+            )
 
             hazard_ratios.append(abs(np.log(hr)))  # Use log hazard ratio magnitude
             p_values.append(p_val)
@@ -671,9 +660,7 @@ def run_coxph_feature_selection(
     selected_features = [X.columns[i] for i in sorted_indices]
 
     # Create hazard ratio dictionary for selected features
-    hr_dict = {
-        X.columns[i]: float(hazard_ratios[i]) for i in sorted_indices
-    }
+    hr_dict = {X.columns[i]: float(hazard_ratios[i]) for i in sorted_indices}
 
     # Calculate average C-index for selected features
     if len(selected_features) > 0:
@@ -747,7 +734,7 @@ def run_mrmr_feature_selection(
                     mi_between = mutual_info_regression(
                         X.iloc[:, [idx]].values,
                         X.iloc[:, selected_idx].values.ravel(),
-                        random_state=42
+                        random_state=42,
                     )[0]
                     redundancy += mi_between
                 redundancy /= len(selected_indices)
@@ -776,7 +763,7 @@ def run_mrmr_feature_selection(
     if len(selected_features) > 0:
         X_selected = X[selected_features]
         lr = LogisticRegression(random_state=42, max_iter=1000)
-        cv_scores = cross_val_score(lr, X_selected, y, cv=cv, scoring='roc_auc')
+        cv_scores = cross_val_score(lr, X_selected, y, cv=cv, scoring="roc_auc")
 
         metrics = {
             "method": "mrmr",
@@ -853,9 +840,7 @@ def run_boruta_feature_selection(
     selected_features = [X.columns[i] for i in selected_indices]
 
     # Create importance scores dictionary for selected features
-    importance_dict = {
-        X.columns[i]: float(original_importances[i]) for i in selected_indices
-    }
+    importance_dict = {X.columns[i]: float(original_importances[i]) for i in selected_indices}
 
     # Calculate metrics
     from sklearn.model_selection import cross_val_score
@@ -864,7 +849,7 @@ def run_boruta_feature_selection(
     if len(selected_features) > 0:
         X_selected = X[selected_features]
         lr = LogisticRegression(random_state=42, max_iter=1000)
-        cv_scores = cross_val_score(lr, X_selected, y, cv=cv, scoring='roc_auc')
+        cv_scores = cross_val_score(lr, X_selected, y, cv=cv, scoring="roc_auc")
 
         metrics = {
             "method": "boruta",
@@ -1001,7 +986,7 @@ def run_relieff_feature_selection(
     if len(selected_features) > 0:
         X_selected = X[selected_features]
         lr = LogisticRegression(random_state=42, max_iter=1000)
-        cv_scores = cross_val_score(lr, X_selected, y, cv=cv, scoring='roc_auc')
+        cv_scores = cross_val_score(lr, X_selected, y, cv=cv, scoring="roc_auc")
 
         metrics = {
             "method": "relieff",
@@ -1057,11 +1042,11 @@ if CELERY_AVAILABLE and celery_app:
                     raise ValueError(f"Job {job_id} not found")
 
                 job.status = JobStatus.RUNNING
-                job.started_at = datetime.utcnow()
+                job.started_at = datetime.now(timezone.utc)
                 db.commit()
 
                 # Update task state
-                self.update_state(state='PROGRESS', meta={'status': 'Loading data'})
+                self.update_state(state="PROGRESS", meta={"status": "Loading data"})
 
                 # Get dataset
                 dataset = db.query(Dataset).filter(Dataset.id == UUID(dataset_id)).first()
@@ -1074,16 +1059,17 @@ if CELERY_AVAILABLE and celery_app:
 
                 # Parse S3 URI
                 from urllib.parse import urlparse
+
                 parsed = urlparse(dataset.file_path)
-                object_name = parsed.path.lstrip('/')
+                object_name = parsed.path.lstrip("/")
 
                 # Download and read data
                 file_obj = storage_client.download_file(object_name)
 
                 # Assume CSV format for now
-                if dataset.file_path.endswith('.csv'):
+                if dataset.file_path.endswith(".csv"):
                     df = pd.read_csv(file_obj)
-                elif dataset.file_path.endswith('.h5ad'):
+                elif dataset.file_path.endswith(".h5ad"):
                     # For h5ad files, we'd need scanpy
                     raise NotImplementedError("h5ad format not yet supported")
                 else:
@@ -1092,36 +1078,36 @@ if CELERY_AVAILABLE and celery_app:
                 logger.info(f"Loaded data: {df.shape[0]} samples, {df.shape[1]} features")
 
                 # Get configuration
-                methods = config.get('methods', ['lasso'])
-                n_features = config.get('n_features', 100)
-                cv_folds = config.get('cv_folds', 5)
+                methods = config.get("methods", ["lasso"])
+                n_features = config.get("n_features", 100)
+                cv_folds = config.get("cv_folds", 5)
 
                 # Determine target columns
                 target_columns: list[str] = []
-                target_config = config.get('target')
+                target_config = config.get("target")
                 if isinstance(target_config, str):
                     target_columns = [target_config]
                 elif isinstance(target_config, dict):
-                    if 'column' in target_config:
-                        target_columns = [target_config['column']]
-                    elif 'columns' in target_config and isinstance(
-                        target_config['columns'], (list, tuple)
+                    if "column" in target_config:
+                        target_columns = [target_config["column"]]
+                    elif "columns" in target_config and isinstance(
+                        target_config["columns"], (list, tuple)
                     ):
-                        target_columns = list(target_config['columns'])
+                        target_columns = list(target_config["columns"])
                     elif {
-                        'time_column',
-                        'event_column',
+                        "time_column",
+                        "event_column",
                     }.issubset(target_config.keys()):
                         target_columns = [
-                            target_config['time_column'],
-                            target_config['event_column'],
+                            target_config["time_column"],
+                            target_config["event_column"],
                         ]
 
                 if not target_columns:
-                    explicit_target_column = config.get('target_column')
+                    explicit_target_column = config.get("target_column")
                     if isinstance(explicit_target_column, str):
                         target_columns = [explicit_target_column]
-                    explicit_target_columns = config.get('target_columns')
+                    explicit_target_columns = config.get("target_columns")
                     if isinstance(explicit_target_columns, (list, tuple)):
                         target_columns = list(explicit_target_columns)
 
@@ -1131,12 +1117,10 @@ if CELERY_AVAILABLE and celery_app:
 
                 missing_columns = [col for col in target_columns if col not in df.columns]
                 if missing_columns:
-                    raise ValueError(
-                        f"Target column(s) {missing_columns} not found in dataset"
-                    )
+                    raise ValueError(f"Target column(s) {missing_columns} not found in dataset")
 
                 # Ensure Cox PH receives both survival columns
-                if 'cox_ph' in methods and len(target_columns) < 2:
+                if "cox_ph" in methods and len(target_columns) < 2:
                     raise ValueError(
                         "Cox PH feature selection requires both time and event columns. "
                         "Provide them using config['target'] or config['target_columns']."
@@ -1153,26 +1137,26 @@ if CELERY_AVAILABLE and celery_app:
                     y = df[target_columns]
 
                 # Get stability and ensemble config
-                stability_config = config.get('stability', None)
-                ensemble_config = config.get('ensemble', None)
+                stability_config = config.get("stability", None)
+                ensemble_config = config.get("ensemble", None)
 
                 # Update task state
-                self.update_state(state='PROGRESS', meta={'status': 'Running feature selection'})
+                self.update_state(state="PROGRESS", meta={"status": "Running feature selection"})
 
                 # Map method names to functions
                 method_functions = {
-                    'lasso': run_lasso_feature_selection,
-                    'elastic_net': run_elasticnet_feature_selection,
-                    'random_forest': run_randomforest_feature_selection,
-                    'xgboost': run_xgboost_feature_selection,
-                    'variance_threshold': run_variance_threshold_feature_selection,
-                    'ttest': run_ttest_feature_selection,
-                    'l1_svm': run_l1svm_feature_selection,
-                    'ridge': run_ridge_feature_selection,
-                    'cox_ph': run_coxph_feature_selection,
-                    'mrmr': run_mrmr_feature_selection,
-                    'boruta': run_boruta_feature_selection,
-                    'relieff': run_relieff_feature_selection,
+                    "lasso": run_lasso_feature_selection,
+                    "elastic_net": run_elasticnet_feature_selection,
+                    "random_forest": run_randomforest_feature_selection,
+                    "xgboost": run_xgboost_feature_selection,
+                    "variance_threshold": run_variance_threshold_feature_selection,
+                    "ttest": run_ttest_feature_selection,
+                    "l1_svm": run_l1svm_feature_selection,
+                    "ridge": run_ridge_feature_selection,
+                    "cox_ph": run_coxph_feature_selection,
+                    "mrmr": run_mrmr_feature_selection,
+                    "boruta": run_boruta_feature_selection,
+                    "relieff": run_relieff_feature_selection,
                 }
 
                 # Determine execution mode
@@ -1194,16 +1178,16 @@ if CELERY_AVAILABLE and celery_app:
                         raise ValueError("Ensemble requires at least 2 valid methods")
 
                     # Create ensemble selector
-                    ensemble_method = ensemble_config.get('method', 'majority_vote')
-                    min_votes = ensemble_config.get('min_votes', 2)
-                    ensemble_n_features = ensemble_config.get('n_features', n_features)
+                    ensemble_method = ensemble_config.get("method", "majority_vote")
+                    min_votes = ensemble_config.get("min_votes", 2)
+                    ensemble_n_features = ensemble_config.get("n_features", n_features)
 
                     ensemble_selector = EnsembleFeatureSelector(
                         base_selectors=selector_funcs,
                         ensemble_method=ensemble_method,
                         min_votes=min_votes,
                         n_features=ensemble_n_features,
-                        verbose=True
+                        verbose=True,
                     )
 
                     selected_features, metrics = ensemble_selector.select_features(
@@ -1217,7 +1201,7 @@ if CELERY_AVAILABLE and celery_app:
                     method_name = methods[0] if isinstance(methods, list) else methods
 
                     if method_name not in method_functions:
-                        available_methods = ', '.join(method_functions.keys())
+                        available_methods = ", ".join(method_functions.keys())
                         raise ValueError(
                             f"Method '{method_name}' not implemented. "
                             f"Available methods: {available_methods}"
@@ -1228,9 +1212,9 @@ if CELERY_AVAILABLE and celery_app:
                     from omicselector2.features.stability import StabilitySelector
 
                     # Create stability selector
-                    n_bootstraps = stability_config.get('n_bootstraps', 100)
-                    threshold = stability_config.get('threshold', 0.6)
-                    sample_fraction = stability_config.get('sample_fraction', 0.8)
+                    n_bootstraps = stability_config.get("n_bootstraps", 100)
+                    threshold = stability_config.get("threshold", 0.6)
+                    sample_fraction = stability_config.get("sample_fraction", 0.8)
 
                     method_func = method_functions[method_name]
                     stability_selector = StabilitySelector(
@@ -1239,7 +1223,7 @@ if CELERY_AVAILABLE and celery_app:
                         threshold=threshold,
                         sample_fraction=sample_fraction,
                         random_state=42,
-                        verbose=True
+                        verbose=True,
                     )
 
                     selected_features, stability_scores = stability_selector.select_stable_features(
@@ -1248,11 +1232,11 @@ if CELERY_AVAILABLE and celery_app:
 
                     # Create metrics dict
                     metrics = {
-                        'method': f"{method_name}_stability",
-                        'n_features_selected': len(selected_features),
-                        'n_bootstraps': n_bootstraps,
-                        'threshold': threshold,
-                        'stability_scores': {f: stability_scores[f] for f in selected_features}
+                        "method": f"{method_name}_stability",
+                        "n_features_selected": len(selected_features),
+                        "n_bootstraps": n_bootstraps,
+                        "threshold": threshold,
+                        "stability_scores": {f: stability_scores[f] for f in selected_features},
                     }
 
                     logger.info(
@@ -1265,7 +1249,7 @@ if CELERY_AVAILABLE and celery_app:
                     method_name = methods[0] if isinstance(methods, list) else methods
 
                     if method_name not in method_functions:
-                        available_methods = ', '.join(method_functions.keys())
+                        available_methods = ", ".join(method_functions.keys())
                         raise ValueError(
                             f"Method '{method_name}' not implemented. "
                             f"Available methods: {available_methods}"
@@ -1292,7 +1276,7 @@ if CELERY_AVAILABLE and celery_app:
 
                 # Update job status to COMPLETED
                 job.status = JobStatus.COMPLETED
-                job.completed_at = datetime.utcnow()
+                job.completed_at = datetime.now(timezone.utc)
                 job.result_id = result.id
                 db.commit()
 
@@ -1318,7 +1302,7 @@ if CELERY_AVAILABLE and celery_app:
                     job = db.query(Job).filter(Job.id == UUID(job_id)).first()
                     if job:
                         job.status = JobStatus.FAILED
-                        job.completed_at = datetime.utcnow()
+                        job.completed_at = datetime.now(timezone.utc)
                         job.error_message = str(e)
                         db.commit()
                 finally:

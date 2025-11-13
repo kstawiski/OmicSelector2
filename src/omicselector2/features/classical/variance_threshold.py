@@ -130,7 +130,9 @@ class VarianceThresholdSelector(BaseFeatureSelector):
         self._select_features(X)
 
         if self.verbose:
-            print(f"Selected {len(self.selected_features_)} features with variance > {self.threshold}")
+            print(
+                f"Selected {len(self.selected_features_)} features with variance > {self.threshold}"
+            )
 
         return self
 

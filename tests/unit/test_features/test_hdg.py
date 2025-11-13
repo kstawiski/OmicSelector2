@@ -61,9 +61,7 @@ def sample_expression_data() -> tuple[pd.DataFrame, pd.Series]:
         expr = np.random.gamma(0.1, 0.1, n_cells)
         X_data.append(expr)
 
-    X = pd.DataFrame(
-        np.array(X_data).T, columns=[f"gene_{i}" for i in range(n_genes)]
-    )
+    X = pd.DataFrame(np.array(X_data).T, columns=[f"gene_{i}" for i in range(n_genes)])
 
     # Binary cell type labels
     y = pd.Series(np.random.binomial(1, 0.5, n_cells))
@@ -86,9 +84,7 @@ class TestHDGSelector:
         assert selector.n_features_to_select == 20
         assert selector.metric == "cv"
 
-    def test_fit_with_cv(
-        self, sample_expression_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_fit_with_cv(self, sample_expression_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test fitting with coefficient of variation metric."""
         X, y = sample_expression_data
 
@@ -105,7 +101,9 @@ class TestHDGSelector:
         # Verify selected genes have higher CV than non-selected genes on average
         selected_cvs = [selector.dispersions_[g] for g in selector.selected_features_]
         non_selected = [g for g in X.columns if g not in selector.selected_features_]
-        non_selected_cvs = [selector.dispersions_[g] for g in non_selected if selector.dispersions_[g] > -np.inf]
+        non_selected_cvs = [
+            selector.dispersions_[g] for g in non_selected if selector.dispersions_[g] > -np.inf
+        ]
 
         # Mean CV of selected should be higher than mean CV of non-selected
         if len(non_selected_cvs) > 0:
@@ -123,9 +121,7 @@ class TestHDGSelector:
         assert len(selector.selected_features_) == 20
         assert hasattr(selector, "dispersions_")
 
-    def test_fit_with_std(
-        self, sample_expression_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_fit_with_std(self, sample_expression_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test fitting with standard deviation metric."""
         X, y = sample_expression_data
 
@@ -134,9 +130,7 @@ class TestHDGSelector:
 
         assert len(selector.selected_features_) == 20
 
-    def test_transform(
-        self, sample_expression_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_transform(self, sample_expression_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test transform method."""
         X, y = sample_expression_data
 
@@ -150,9 +144,7 @@ class TestHDGSelector:
         assert X_transformed.shape[1] == 15
         assert list(X_transformed.columns) == selector.selected_features_
 
-    def test_fit_transform(
-        self, sample_expression_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_fit_transform(self, sample_expression_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test fit_transform method."""
         X, y = sample_expression_data
 
@@ -161,9 +153,7 @@ class TestHDGSelector:
 
         assert X_transformed.shape[1] == 15
 
-    def test_get_support(
-        self, sample_expression_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_get_support(self, sample_expression_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test get_support method."""
         X, y = sample_expression_data
 
@@ -206,14 +196,10 @@ class TestHDGSelector:
         selector.fit(X, y)
 
         # Check that selected features are sorted by dispersion (descending)
-        selected_dispersions = [
-            selector.dispersions_[f] for f in selector.selected_features_
-        ]
+        selected_dispersions = [selector.dispersions_[f] for f in selector.selected_features_]
         assert selected_dispersions == sorted(selected_dispersions, reverse=True)
 
-    def test_cv_calculation(
-        self, sample_expression_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_cv_calculation(self, sample_expression_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test coefficient of variation calculation."""
         X, y = sample_expression_data
 
@@ -228,9 +214,7 @@ class TestHDGSelector:
             calculated_cv = selector.dispersions_["gene_0"]
             assert np.abs(calculated_cv - expected_cv) < 1e-6
 
-    def test_min_mean_filter(
-        self, sample_expression_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_min_mean_filter(self, sample_expression_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test minimum mean expression filter."""
         X, y = sample_expression_data
 
@@ -244,9 +228,7 @@ class TestHDGSelector:
             gene_mean = X.iloc[:, gene_idx].mean()
             assert gene_mean >= 2.0
 
-    def test_get_result(
-        self, sample_expression_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_get_result(self, sample_expression_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test get_result returns metadata."""
         X, y = sample_expression_data
 
@@ -261,9 +243,7 @@ class TestHDGSelector:
         assert "metric" in result.metadata
         assert "dispersions" in result.metadata
 
-    def test_reproducibility(
-        self, sample_expression_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_reproducibility(self, sample_expression_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test that HDG is deterministic (no randomness)."""
         X, y = sample_expression_data
 

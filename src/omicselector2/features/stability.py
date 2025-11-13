@@ -116,9 +116,7 @@ class StabilitySelector(BaseFeatureSelector):
             raise ValueError(f"threshold must be between 0 and 1, got {threshold}")
 
         if not (0 < sample_fraction <= 1):
-            raise ValueError(
-                f"sample_fraction must be between 0 and 1, got {sample_fraction}"
-            )
+            raise ValueError(f"sample_fraction must be between 0 and 1, got {sample_fraction}")
 
         # Check if base_selector is callable (function-based)
         self._is_function_selector = callable(base_selector) and not isinstance(
@@ -205,24 +203,21 @@ class StabilitySelector(BaseFeatureSelector):
                         selection_counts[feature] += 1
             except Exception as e:
                 if self.verbose:
-                    print(f"Warning: Bootstrap {i+1} failed: {e}")
+                    print(f"Warning: Bootstrap {i + 1} failed: {e}")
                 continue
 
             if self.verbose and (i + 1) % 20 == 0:
-                print(f"  Completed {i+1}/{self.n_bootstraps} bootstraps")
+                print(f"  Completed {i + 1}/{self.n_bootstraps} bootstraps")
 
         # Compute stability scores
         self.selection_counts_ = selection_counts
         self.stability_scores_ = {
-            feature: count / self.n_bootstraps
-            for feature, count in selection_counts.items()
+            feature: count / self.n_bootstraps for feature, count in selection_counts.items()
         }
 
         # Select features above threshold
         stable_features = [
-            feature
-            for feature, score in self.stability_scores_.items()
-            if score >= self.threshold
+            feature for feature, score in self.stability_scores_.items() if score >= self.threshold
         ]
 
         # Sort by stability score (descending)
@@ -230,9 +225,7 @@ class StabilitySelector(BaseFeatureSelector):
 
         # Store results
         self.selected_features_ = stable_features
-        self.feature_scores_ = np.array(
-            [self.stability_scores_[f] for f in stable_features]
-        )
+        self.feature_scores_ = np.array([self.stability_scores_[f] for f in stable_features])
 
         # Create support mask
         self.support_mask_ = np.zeros(n_features, dtype=bool)
@@ -371,24 +364,21 @@ class StabilitySelector(BaseFeatureSelector):
 
             except Exception as e:
                 if self.verbose:
-                    print(f"Warning: Bootstrap {i+1} failed: {e}")
+                    print(f"Warning: Bootstrap {i + 1} failed: {e}")
                 continue
 
             if self.verbose and (i + 1) % 20 == 0:
-                print(f"  Completed {i+1}/{self.n_bootstraps} bootstraps")
+                print(f"  Completed {i + 1}/{self.n_bootstraps} bootstraps")
 
         # Compute stability scores
         self.selection_counts_ = selection_counts
         self.stability_scores_ = {
-            feature: count / self.n_bootstraps
-            for feature, count in selection_counts.items()
+            feature: count / self.n_bootstraps for feature, count in selection_counts.items()
         }
 
         # Select features above threshold
         stable_features = [
-            feature
-            for feature, score in self.stability_scores_.items()
-            if score >= self.threshold
+            feature for feature, score in self.stability_scores_.items() if score >= self.threshold
         ]
 
         # Sort by stability score (descending)
@@ -398,8 +388,7 @@ class StabilitySelector(BaseFeatureSelector):
 
         if self.verbose:
             print(
-                f"Selected {len(stable_features)} stable features "
-                f"(threshold={self.threshold})"
+                f"Selected {len(stable_features)} stable features " f"(threshold={self.threshold})"
             )
 
         return stable_features, self.stability_scores_
@@ -483,9 +472,7 @@ def calculate_stability_scores(
             scores[feature] = count / n_bootstraps
 
     else:
-        raise ValueError(
-            "Either bootstrap_selections or selection_counts must be provided"
-        )
+        raise ValueError("Either bootstrap_selections or selection_counts must be provided")
 
     return scores
 

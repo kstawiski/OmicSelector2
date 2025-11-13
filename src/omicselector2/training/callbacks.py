@@ -26,9 +26,7 @@ Examples:
 """
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, Optional
-
-import numpy as np
+from typing import TYPE_CHECKING, Literal, Optional
 
 if TYPE_CHECKING:
     from omicselector2.training.trainer import Trainer
@@ -77,9 +75,7 @@ class Callback:
         """
         pass
 
-    def on_epoch_end(
-        self, epoch: int, metrics: dict[str, float], trainer: "Trainer"
-    ) -> None:
+    def on_epoch_end(self, epoch: int, metrics: dict[str, float], trainer: "Trainer") -> None:
         """Called at the end of an epoch.
 
         Args:
@@ -159,9 +155,7 @@ class EarlyStopping(Callback):
         self.best_value = None
         self.stopped_epoch = 0
 
-    def on_epoch_end(
-        self, epoch: int, metrics: dict[str, float], trainer: "Trainer"
-    ) -> None:
+    def on_epoch_end(self, epoch: int, metrics: dict[str, float], trainer: "Trainer") -> None:
         """Check if training should stop based on monitored metric.
 
         Args:
@@ -299,9 +293,7 @@ class ModelCheckpoint(Callback):
         """
         self.best_value = None
 
-    def on_epoch_end(
-        self, epoch: int, metrics: dict[str, float], trainer: "Trainer"
-    ) -> None:
+    def on_epoch_end(self, epoch: int, metrics: dict[str, float], trainer: "Trainer") -> None:
         """Save model if metric improved (or every epoch if save_best_only=False).
 
         Args:
@@ -344,9 +336,7 @@ class ModelCheckpoint(Callback):
         else:
             return current > best
 
-    def _save_model(
-        self, epoch: int, metric_value: Optional[float], trainer: "Trainer"
-    ) -> None:
+    def _save_model(self, epoch: int, metric_value: Optional[float], trainer: "Trainer") -> None:
         """Save the model to disk.
 
         Args:
@@ -372,9 +362,7 @@ class ProgressLogger(Callback):
         >>> # Prints: "Epoch 1: train_loss=0.567, val_loss=0.432, val_accuracy=0.85"
     """
 
-    def on_epoch_end(
-        self, epoch: int, metrics: dict[str, float], trainer: "Trainer"
-    ) -> None:
+    def on_epoch_end(self, epoch: int, metrics: dict[str, float], trainer: "Trainer") -> None:
         """Print epoch progress.
 
         Args:
@@ -382,7 +370,5 @@ class ProgressLogger(Callback):
             metrics: Dictionary of metrics.
             trainer: The trainer instance.
         """
-        metrics_str = ", ".join(
-            f"{key}={value:.4f}" for key, value in sorted(metrics.items())
-        )
+        metrics_str = ", ".join(f"{key}={value:.4f}" for key, value in sorted(metrics.items()))
         print(f"Epoch {epoch}: {metrics_str}")

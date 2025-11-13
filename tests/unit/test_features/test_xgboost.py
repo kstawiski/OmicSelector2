@@ -151,9 +151,7 @@ class TestXGBoostSelector:
             assert len(selector.selected_features_) == 20
             assert selector.feature_scores_ is not None
 
-    def test_regression_task(
-        self, sample_regression_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_regression_task(self, sample_regression_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test XGBoost selector works for regression task."""
         X, y = sample_regression_data
         selector = XGBoostSelector(task="regression", n_features_to_select=15)
@@ -187,9 +185,7 @@ class TestXGBoostSelector:
         with pytest.raises(ValueError, match="task must be 'regression' or 'classification'"):
             XGBoostSelector(task="invalid")
 
-    def test_get_result(
-        self, sample_classification_data: tuple[pd.DataFrame, pd.Series]
-    ) -> None:
+    def test_get_result(self, sample_classification_data: tuple[pd.DataFrame, pd.Series]) -> None:
         """Test get_result returns FeatureSelectorResult with correct structure."""
         X, y = sample_classification_data
         selector = XGBoostSelector(n_features_to_select=30)
@@ -202,8 +198,10 @@ class TestXGBoostSelector:
         assert len(result.feature_scores) == 30
         assert result.n_features_selected == 30
         assert result.method_name == "XGBoostSelector"
-        assert all(result.feature_scores[i] >= result.feature_scores[i + 1]
-                   for i in range(len(result.feature_scores) - 1))
+        assert all(
+            result.feature_scores[i] >= result.feature_scores[i + 1]
+            for i in range(len(result.feature_scores) - 1)
+        )
 
     def test_reproducibility(
         self, sample_classification_data: tuple[pd.DataFrame, pd.Series]

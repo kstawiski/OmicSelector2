@@ -149,9 +149,7 @@ class SignatureBenchmark:
         X_test_sig = X_test[signature]
 
         # Cross-validation evaluation
-        cv_metrics, cv_scores_per_fold = self._cross_validate(
-            X_train_sig, y_train, model_name
-        )
+        cv_metrics, cv_scores_per_fold = self._cross_validate(X_train_sig, y_train, model_name)
 
         # Train final model on all training data
         model = self._create_model(model_name)
@@ -159,9 +157,7 @@ class SignatureBenchmark:
 
         # Evaluate on test set
         y_pred_proba = model.predict_proba(X_test_sig)
-        test_metrics = self.evaluator.evaluate(
-            y_test.values, y_pred_proba, probabilities=True
-        )
+        test_metrics = self.evaluator.evaluate(y_test.values, y_pred_proba, probabilities=True)
 
         # Create result
         if signature_name is None:
@@ -213,9 +209,7 @@ class SignatureBenchmark:
 
             # Evaluate
             y_pred_proba = model.predict_proba(X_val_fold)
-            metrics = self.evaluator.evaluate(
-                y_val_fold.values, y_pred_proba, probabilities=True
-            )
+            metrics = self.evaluator.evaluate(y_val_fold.values, y_pred_proba, probabilities=True)
 
             # Store scores
             cv_scores_per_fold["accuracy"].append(metrics["accuracy"])
@@ -224,8 +218,7 @@ class SignatureBenchmark:
 
         # Compute mean metrics
         cv_metrics = {
-            metric: float(np.mean(scores))
-            for metric, scores in cv_scores_per_fold.items()
+            metric: float(np.mean(scores)) for metric, scores in cv_scores_per_fold.items()
         }
 
         return cv_metrics, cv_scores_per_fold
@@ -242,15 +235,11 @@ class SignatureBenchmark:
             Model instance.
         """
         if model_name == "RandomForest":
-            return RandomForestClassifier(
-                n_estimators=100, random_state=self.random_state
-            )
+            return RandomForestClassifier(n_estimators=100, random_state=self.random_state)
         elif model_name == "LogisticRegression":
             return LogisticRegressionModel(C=1.0, random_state=self.random_state)
         elif model_name == "XGBoost":
-            return XGBoostClassifier(
-                n_estimators=100, random_state=self.random_state
-            )
+            return XGBoostClassifier(n_estimators=100, random_state=self.random_state)
         elif model_name == "TabNet":
             return TabNetClassifier(
                 max_epochs=50,  # Reasonable for benchmarking
@@ -311,9 +300,7 @@ class Benchmarker:
         """
         self.cv_folds = cv_folds
         self.random_state = random_state
-        self.signature_benchmark = SignatureBenchmark(
-            cv_folds=cv_folds, random_state=random_state
-        )
+        self.signature_benchmark = SignatureBenchmark(cv_folds=cv_folds, random_state=random_state)
 
     def benchmark_signatures(
         self,

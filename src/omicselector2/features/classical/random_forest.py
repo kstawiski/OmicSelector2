@@ -63,12 +63,12 @@ class RandomForestSelector(BaseFeatureSelector):
         max_depth: Optional[int] = None,
         min_samples_split: int = 2,
         min_samples_leaf: int = 1,
-        task: Literal['regression', 'classification'] = 'classification',
-        importance_type: Literal['gini', 'permutation'] = 'gini',
+        task: Literal["regression", "classification"] = "classification",
+        importance_type: Literal["gini", "permutation"] = "gini",
         n_features_to_select: Optional[int] = None,
         random_state: Optional[int] = None,
         verbose: bool = False,
-        n_jobs: int = -1
+        n_jobs: int = -1,
     ) -> None:
         """Initialize Random Forest feature selector.
 
@@ -88,18 +88,16 @@ class RandomForestSelector(BaseFeatureSelector):
             ValueError: If parameters are invalid.
         """
         super().__init__(
-            n_features_to_select=n_features_to_select,
-            random_state=random_state,
-            verbose=verbose
+            n_features_to_select=n_features_to_select, random_state=random_state, verbose=verbose
         )
 
         if n_estimators <= 0:
             raise ValueError(f"n_estimators must be positive, got {n_estimators}")
 
-        if task not in ['regression', 'classification']:
+        if task not in ["regression", "classification"]:
             raise ValueError(f"task must be 'regression' or 'classification', got {task}")
 
-        if importance_type not in ['gini', 'permutation']:
+        if importance_type not in ["gini", "permutation"]:
             raise ValueError(
                 f"importance_type must be 'gini' or 'permutation', got {importance_type}"
             )
@@ -128,7 +126,7 @@ class RandomForestSelector(BaseFeatureSelector):
         self._set_feature_metadata(X)
 
         # Create and fit model
-        if self.task == 'classification':
+        if self.task == "classification":
             self.model_ = RandomForestClassifier(
                 n_estimators=self.n_estimators,
                 max_depth=self.max_depth,
@@ -136,7 +134,7 @@ class RandomForestSelector(BaseFeatureSelector):
                 min_samples_leaf=self.min_samples_leaf,
                 random_state=self.random_state,
                 n_jobs=self.n_jobs,
-                verbose=1 if self.verbose else 0
+                verbose=1 if self.verbose else 0,
             )
         else:
             self.model_ = RandomForestRegressor(
@@ -146,25 +144,20 @@ class RandomForestSelector(BaseFeatureSelector):
                 min_samples_leaf=self.min_samples_leaf,
                 random_state=self.random_state,
                 n_jobs=self.n_jobs,
-                verbose=1 if self.verbose else 0
+                verbose=1 if self.verbose else 0,
             )
 
         self.model_.fit(X, y)
 
         # Get feature importance
-        if self.importance_type == 'gini':
+        if self.importance_type == "gini":
             importances = self.model_.feature_importances_
         else:
             # Permutation importance (more accurate but slower)
             from sklearn.inspection import permutation_importance
 
             perm_result = permutation_importance(
-                self.model_,
-                X,
-                y,
-                n_repeats=10,
-                random_state=self.random_state,
-                n_jobs=self.n_jobs
+                self.model_, X, y, n_repeats=10, random_state=self.random_state, n_jobs=self.n_jobs
             )
             importances = perm_result.importances_mean
 
@@ -220,7 +213,7 @@ class RandomForestSelector(BaseFeatureSelector):
         if self.model_ is None:
             raise ValueError("Selector not fitted. Call fit() first.")
 
-        if self.importance_type == 'gini':
+        if self.importance_type == "gini":
             return self.model_.feature_importances_
         else:
             raise ValueError("Full importance only available for gini type")

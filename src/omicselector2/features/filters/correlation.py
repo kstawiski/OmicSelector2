@@ -105,9 +105,7 @@ class CorrelationFilter(BaseFeatureSelector):
             raise ValueError(f"threshold must be between 0 and 1, got {threshold}")
 
         if method not in self.VALID_METHODS:
-            raise ValueError(
-                f"method must be one of {self.VALID_METHODS}, got '{method}'"
-            )
+            raise ValueError(f"method must be one of {self.VALID_METHODS}, got '{method}'")
 
         self.threshold = threshold
         self.method = method
@@ -133,10 +131,7 @@ class CorrelationFilter(BaseFeatureSelector):
         self._set_feature_metadata(X)
 
         if self.verbose:
-            print(
-                f"Computing {self.method} correlation matrix "
-                f"(threshold={self.threshold})..."
-            )
+            print(f"Computing {self.method} correlation matrix " f"(threshold={self.threshold})...")
 
         # Compute correlation matrix
         self.correlation_matrix_ = X.corr(method=self.method)

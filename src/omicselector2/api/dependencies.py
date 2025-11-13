@@ -191,7 +191,7 @@ def require_researcher(
 
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
-        detail=f"Insufficient permissions. Required role: RESEARCHER or ADMIN",
+        detail="Insufficient permissions. Required role: RESEARCHER or ADMIN",
     )
 
 
@@ -218,7 +218,7 @@ def require_admin(
 
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
-        detail=f"Insufficient permissions. Required role: ADMIN",
+        detail="Insufficient permissions. Required role: ADMIN",
     )
 
 

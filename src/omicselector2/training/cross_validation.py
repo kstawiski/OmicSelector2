@@ -170,15 +170,11 @@ class StratifiedKFoldSplitter:
         if y is None:
             raise ValueError("y is required for stratified splitting")
 
-        n_samples = len(X)
         rng = np.random.RandomState(self.random_state) if self.shuffle else None
 
         # Get class labels and their indices
         classes, y_indices = np.unique(y, return_inverse=True)
         n_classes = len(classes)
-
-        # Count samples per class
-        class_counts = np.bincount(y_indices)
 
         # Create indices per class
         class_indices = [np.where(y_indices == i)[0] for i in range(n_classes)]
@@ -194,9 +190,7 @@ class StratifiedKFoldSplitter:
         for class_idx, indices in enumerate(class_indices):
             # Split this class's samples into n_splits folds
             n_class_samples = len(indices)
-            fold_sizes = np.full(
-                self.n_splits, n_class_samples // self.n_splits, dtype=int
-            )
+            fold_sizes = np.full(self.n_splits, n_class_samples // self.n_splits, dtype=int)
             fold_sizes[: n_class_samples % self.n_splits] += 1
 
             current = 0
@@ -209,11 +203,7 @@ class StratifiedKFoldSplitter:
         for test_fold_idx in range(self.n_splits):
             test_idx = np.array(fold_indices[test_fold_idx])
             train_idx = np.concatenate(
-                [
-                    fold_indices[i]
-                    for i in range(self.n_splits)
-                    if i != test_fold_idx
-                ]
+                [fold_indices[i] for i in range(self.n_splits) if i != test_fold_idx]
             )
             yield train_idx, test_idx
 
@@ -299,9 +289,7 @@ class TrainTestValSplitter:
 
         if self.stratify and y is not None:
             # Stratified split
-            train_idx, test_idx, val_idx = self._stratified_split(
-                indices, y.values, rng
-            )
+            train_idx, test_idx, val_idx = self._stratified_split(indices, y.values, rng)
         else:
             # Random split
             rng.shuffle(indices)
@@ -421,9 +409,7 @@ class CrossValidator:
             ValueError: If cv_type is invalid.
         """
         if cv_type not in self.VALID_CV_TYPES:
-            raise ValueError(
-                f"cv_type must be one of {self.VALID_CV_TYPES}, got '{cv_type}'"
-            )
+            raise ValueError(f"cv_type must be one of {self.VALID_CV_TYPES}, got '{cv_type}'")
 
         self.cv_type = cv_type
         self.n_splits = n_splits
@@ -434,10 +420,8 @@ class CrossValidator:
 
         # Initialize appropriate splitter
         if cv_type == "kfold":
-            self._splitter: Union[
-                KFoldSplitter, StratifiedKFoldSplitter, TrainTestValSplitter
-            ] = KFoldSplitter(
-                n_splits=n_splits, shuffle=True, random_state=random_state
+            self._splitter: Union[KFoldSplitter, StratifiedKFoldSplitter, TrainTestValSplitter] = (
+                KFoldSplitter(n_splits=n_splits, shuffle=True, random_state=random_state)
             )
         elif cv_type == "stratified":
             self._splitter = StratifiedKFoldSplitter(
@@ -467,9 +451,7 @@ class CrossValidator:
             ValueError: If cv_type is train_test_val (use get_train_test_val instead).
         """
         if self.cv_type == "train_test_val":
-            raise ValueError(
-                "Use get_train_test_val() method for train_test_val cv_type"
-            )
+            raise ValueError("Use get_train_test_val() method for train_test_val cv_type")
 
         yield from self._splitter.split(X, y)
 

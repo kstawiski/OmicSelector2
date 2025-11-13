@@ -75,9 +75,7 @@ class CoxSelector(BaseFeatureSelector):
         Raises:
             ValueError: If n_features_to_select <= 0 or invalid penalty.
         """
-        super().__init__(
-            n_features_to_select=n_features_to_select, verbose=verbose
-        )
+        super().__init__(n_features_to_select=n_features_to_select, verbose=verbose)
 
         if n_features_to_select <= 0:
             raise ValueError("n_features_to_select must be positive")
@@ -91,9 +89,7 @@ class CoxSelector(BaseFeatureSelector):
         # Attributes set during fit
         self.model_: Optional[CoxPHFitter] = None
 
-    def fit(
-        self, X: pd.DataFrame, y: pd.DataFrame
-    ) -> "CoxSelector":
+    def fit(self, X: pd.DataFrame, y: pd.DataFrame) -> "CoxSelector":
         """Fit Cox regression model and select top features.
 
         Args:
@@ -140,9 +136,7 @@ class CoxSelector(BaseFeatureSelector):
                 l1_ratio=0.0,  # Pure L2
             )
         else:
-            self.model_.fit(
-                data, duration_col="time", event_col="event"
-            )
+            self.model_.fit(data, duration_col="time", event_col="event")
 
         # Extract coefficients
         coefficients = self.model_.params_

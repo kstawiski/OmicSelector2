@@ -7,7 +7,7 @@ import base64
 import binascii
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
@@ -134,9 +134,7 @@ def _encode_cursor(job: Job) -> str:
         "created_at": job.created_at.isoformat(),
         "id": str(job.id),
     }
-    return base64.urlsafe_b64encode(json.dumps(payload).encode("utf-8")).decode(
-        "utf-8"
-    )
+    return base64.urlsafe_b64encode(json.dumps(payload).encode("utf-8")).decode("utf-8")
 
 
 def _decode_cursor(cursor: str) -> tuple[datetime, UUID]:
@@ -261,7 +259,7 @@ else:
             logger.error(f"Failed to submit Celery task: {str(e)}")
             new_job.status = JobStatus.FAILED
             new_job.error_message = "Failed to queue job for execution"
-            new_job.completed_at = datetime.utcnow()
+            new_job.completed_at = datetime.now(timezone.utc)
             db.commit()
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

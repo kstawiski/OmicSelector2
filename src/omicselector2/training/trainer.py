@@ -38,13 +38,12 @@ Examples:
     >>> cv_results = trainer.cross_validate(X, y, cv=cv)
 """
 
-import time
-from typing import Any, Optional, Union
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
 
-from omicselector2.models.base import BaseClassifier, BaseModel, BaseRegressor
+from omicselector2.models.base import BaseClassifier, BaseModel
 from omicselector2.training.callbacks import Callback
 from omicselector2.training.cross_validation import CrossValidator
 from omicselector2.training.evaluator import (
@@ -160,12 +159,20 @@ class Trainer:
             callback.on_train_begin(self)
 
         # Check if model supports incremental training (has partial_fit method)
-        has_partial_fit = hasattr(self.model.model, 'partial_fit')
-        
+        model_obj = getattr(self.model, "model_", None)
+        if hasattr(self.model, "partial_fit"):
+            incremental_model = self.model
+        elif model_obj is not None and hasattr(model_obj, "partial_fit"):
+            incremental_model = model_obj
+        else:
+            incremental_model = None
+
+        has_partial_fit = incremental_model is not None
+
         # For classical models without partial_fit, fit only once (epochs is ignored)
         # For models with partial_fit, the loop allows iterative training
         actual_epochs = epochs if has_partial_fit else 1
-        
+
         for epoch in range(1, actual_epochs + 1):
             # Trigger on_epoch_begin callbacks
             for callback in self.callbacks:
@@ -176,7 +183,7 @@ class Trainer:
             # Models with partial_fit can train incrementally
             if has_partial_fit and epoch > 1:
                 # Use partial_fit for incremental training
-                self.model.model.partial_fit(X, y)
+                incremental_model.partial_fit(X, y)
             else:
                 # First epoch or models without partial_fit use regular fit
                 self.model.fit(X, y)

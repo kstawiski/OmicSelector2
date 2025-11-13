@@ -4,7 +4,7 @@ This module provides JWT token generation, password hashing, and authentication
 utilities for OmicSelector2.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 try:
@@ -47,8 +47,7 @@ def hash_password(password: str) -> str:
     """
     if not PASSLIB_AVAILABLE:
         raise ImportError(
-            "passlib is required for password hashing. "
-            "Install with: pip install passlib[bcrypt]"
+            "passlib is required for password hashing. " "Install with: pip install passlib[bcrypt]"
         )
 
     return pwd_context.hash(password)
@@ -76,10 +75,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 
-def create_access_token(
-    data: dict,
-    expires_delta: Optional[timedelta] = None
-) -> str:
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     """Create a JWT access token.
 
     Args:
@@ -103,19 +99,15 @@ def create_access_token(
     to_encode = data.copy()
 
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
         # Default to 60 minutes expiration
-        expire = datetime.utcnow() + timedelta(minutes=60)
+        expire = datetime.now(timezone.utc) + timedelta(minutes=60)
 
     to_encode.update({"exp": expire})
 
     # Use HS256 algorithm and SECRET_KEY from settings
-    encoded_jwt = jwt.encode(
-        to_encode,
-        settings.SECRET_KEY,
-        algorithm="HS256"
-    )
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm="HS256")
 
     return encoded_jwt
 
@@ -141,11 +133,7 @@ def decode_access_token(token: str) -> Optional[dict]:
     settings = get_settings()
 
     try:
-        payload = jwt.decode(
-            token,
-            settings.SECRET_KEY,
-            algorithms=["HS256"]
-        )
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
         return payload
     except JWTError:
         return None

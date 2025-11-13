@@ -151,9 +151,7 @@ class TestTabNetClassifier:
         # Should sum to approximately 1
         assert abs(importance.sum() - 1.0) < 0.1
 
-    def test_model_persistence(
-        self, classification_data: tuple, tmp_path: Path
-    ) -> None:
+    def test_model_persistence(self, classification_data: tuple, tmp_path: Path) -> None:
         """Test model save and load."""
         X, y = classification_data
         model = TabNetClassifier(max_epochs=10, verbose=False)
@@ -173,9 +171,7 @@ class TestTabNetClassifier:
         loaded_preds = loaded_model.predict(X)
         np.testing.assert_array_equal(original_preds, loaded_preds)
 
-    def test_predict_before_fit_raises_error(
-        self, classification_data: tuple
-    ) -> None:
+    def test_predict_before_fit_raises_error(self, classification_data: tuple) -> None:
         """Test that predict before fit raises error."""
         X, _ = classification_data
         model = TabNetClassifier()
