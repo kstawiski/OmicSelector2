@@ -1033,10 +1033,18 @@ if CELERY_AVAILABLE and celery_app:
             # Update job status to RUNNING
             from omicselector2.db import get_db, Job, JobStatus, Result, Dataset
             from omicselector2.utils.storage import get_storage_client
+            from omicselector2.utils.redis_pubsub import get_publisher
 
             db = next(get_db())
+            publisher = get_publisher()
 
             try:
+                # Connect to Redis for publishing updates
+                import asyncio
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                loop.run_until_complete(publisher.connect())
+
                 job = db.query(Job).filter(Job.id == UUID(job_id)).first()
                 if not job:
                     raise ValueError(f"Job {job_id} not found")
@@ -1044,6 +1052,15 @@ if CELERY_AVAILABLE and celery_app:
                 job.status = JobStatus.RUNNING
                 job.started_at = datetime.now(timezone.utc)
                 db.commit()
+
+                # Publish status update
+                loop.run_until_complete(
+                    publisher.publish_job_update(
+                        job_id=job_id,
+                        status="running",
+                        message="Job started - loading dataset",
+                    )
+                )
 
                 # Update task state
                 self.update_state(state="PROGRESS", meta={"status": "Loading data"})
@@ -1076,6 +1093,16 @@ if CELERY_AVAILABLE and celery_app:
                     raise ValueError(f"Unsupported file format: {dataset.file_path}")
 
                 logger.info(f"Loaded data: {df.shape[0]} samples, {df.shape[1]} features")
+
+                # Publish progress update
+                loop.run_until_complete(
+                    publisher.publish_job_update(
+                        job_id=job_id,
+                        status="running",
+                        message=f"Data loaded: {df.shape[0]} samples, {df.shape[1]} features",
+                        metadata={"n_samples": df.shape[0], "n_features": df.shape[1]},
+                    )
+                )
 
                 # Get configuration
                 methods = config.get("methods", ["lasso"])
@@ -1142,6 +1169,15 @@ if CELERY_AVAILABLE and celery_app:
 
                 # Update task state
                 self.update_state(state="PROGRESS", meta={"status": "Running feature selection"})
+
+                # Publish progress
+                loop.run_until_complete(
+                    publisher.publish_job_update(
+                        job_id=job_id,
+                        status="running",
+                        message=f"Running feature selection with method(s): {', '.join(methods) if isinstance(methods, list) else methods}",
+                    )
+                )
 
                 # Map method names to functions
                 method_functions = {
@@ -1280,6 +1316,19 @@ if CELERY_AVAILABLE and celery_app:
                 job.result_id = result.id
                 db.commit()
 
+                # Publish final status update
+                loop.run_until_complete(
+                    publisher.publish_job_update(
+                        job_id=job_id,
+                        status="completed",
+                        message=f"Feature selection completed: {len(selected_features)} features selected",
+                        metadata={
+                            "result_id": str(result.id),
+                            "n_features_selected": len(selected_features),
+                        },
+                    )
+                )
+
                 logger.info(f"Feature selection job {job_id} completed successfully")
 
                 return {
@@ -1290,6 +1339,9 @@ if CELERY_AVAILABLE and celery_app:
                 }
 
             finally:
+                # Clean up
+                loop.run_until_complete(publisher.disconnect())
+                loop.close()
                 db.close()
 
         except Exception as e:
@@ -1298,14 +1350,32 @@ if CELERY_AVAILABLE and celery_app:
             # Update job status to FAILED
             try:
                 db = next(get_db())
+                publisher = get_publisher()
+
                 try:
+                    import asyncio
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    loop.run_until_complete(publisher.connect())
+
                     job = db.query(Job).filter(Job.id == UUID(job_id)).first()
                     if job:
                         job.status = JobStatus.FAILED
                         job.completed_at = datetime.now(timezone.utc)
                         job.error_message = str(e)
                         db.commit()
+
+                        # Publish failure update
+                        loop.run_until_complete(
+                            publisher.publish_job_update(
+                                job_id=job_id,
+                                status="failed",
+                                message=f"Feature selection failed: {str(e)}",
+                            )
+                        )
                 finally:
+                    loop.run_until_complete(publisher.disconnect())
+                    loop.close()
                     db.close()
             except Exception as db_error:
                 logger.error(f"Failed to update job status: {str(db_error)}")
