@@ -8,15 +8,21 @@ Examples:
     >>> uvicorn omicselector2.api.main:app --reload
 """
 
+import asyncio
+import logging
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.websockets import WebSocketDisconnect
 
 from omicselector2 import __version__
+from omicselector2.db import get_db
 from omicselector2.utils.config import get_settings
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -65,7 +71,7 @@ app.add_middleware(
 )
 
 # Register API routers
-from omicselector2.api.routes import auth, data
+from omicselector2.api.routes import auth, data, jobs
 
 app.include_router(
     auth.router,
@@ -76,6 +82,11 @@ app.include_router(
     data.router,
     prefix="/api/v1/data",
     tags=["data"],
+)
+app.include_router(
+    jobs.router,
+    prefix="/api/v1/jobs",
+    tags=["jobs"],
 )
 
 
@@ -174,3 +185,73 @@ async def readyz() -> dict[str, str]:
         Simple OK response for readiness probes.
     """
     return {"status": "ok"}
+
+
+# WebSocket endpoint for real-time job updates
+@app.websocket("/api/v1/jobs/{job_id}/ws")
+async def websocket_job_updates(
+    websocket: "WebSocket", job_id: str, token: str
+) -> None:
+    """WebSocket endpoint for real-time job status updates.
+
+    Args:
+        websocket: WebSocket connection
+        job_id: Job UUID
+        token: JWT authentication token (query parameter)
+
+    Example:
+        >>> # JavaScript client example:
+        >>> const ws = new WebSocket(
+        ...     `ws://localhost:8000/api/v1/jobs/${jobId}/ws?token=${accessToken}`
+        ... );
+        >>> ws.onmessage = (event) => {
+        ...     const update = JSON.parse(event.data);
+        ...     console.log('Job update:', update);
+        ... };
+
+    Notes:
+        - Authentication via JWT token in query parameter
+        - Broadcasts all status changes for the specified job
+        - Automatically closes on job completion or failure
+    """
+    from omicselector2.api.websockets import (
+        handle_job_updates,
+        manager,
+        verify_job_access,
+        verify_websocket_auth,
+    )
+
+    # Get database session
+    db = next(get_db())
+
+    try:
+        # Verify authentication
+        user = await verify_websocket_auth(websocket, token, db)
+
+        # Verify job access
+        job = await verify_job_access(user, job_id, db)
+
+        # Connect WebSocket
+        await manager.connect(websocket, job_id)
+
+        # Start background task to listen for Redis updates
+        listener_task = asyncio.create_task(handle_job_updates(job_id))
+
+        try:
+            # Keep connection alive and listen for client messages
+            while True:
+                # Wait for any message from client (keepalive)
+                await websocket.receive_text()
+        except WebSocketDisconnect:
+            logger.info(f"WebSocket disconnected for job {job_id}")
+        finally:
+            # Clean up
+            listener_task.cancel()
+            manager.disconnect(websocket, job_id)
+
+    except WebSocketDisconnect:
+        logger.info(f"WebSocket connection failed for job {job_id}")
+    except Exception as e:
+        logger.error(f"WebSocket error for job {job_id}: {e}")
+    finally:
+        db.close()
